@@ -1,0 +1,15 @@
+<launch>
+	<node pkg="rosbag" type="play" name="rosbag_play" args="--loop /home/muhaimen/ROS/bagfiles/stereo_outdoorA.bag" >
+		<remap from="/stereo_camera/left/camera_info_throttle" to="/left/camera_info" />
+		<remap from="/stereo_camera/right/camera_info_throttle" to="/right/camera_info" />
+	</node>
+
+	<node pkg="image_transport" type="republish" name="republish_left" 
+		args="compressed in:=/stereo_camera/left/image_raw_throttle raw out:=/left/image_raw" />
+	<node pkg="image_transport" type="republish" name="republish_right" 
+		args="compressed in:=/stereo_camera/right/image_raw_throttle raw out:=/right/image_raw" />
+
+	<node name="stereo_image_proc" pkg="stereo_image_proc" type="stereo_image_proc" />
+
+	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find carrt_goggles)/rviz.rviz" />
+</launch>
