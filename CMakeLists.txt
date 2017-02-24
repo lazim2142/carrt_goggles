@@ -1,10 +1,14 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(carrt_goggles)
 
+## C++11
+set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS roscpp rospy)
+find_package(PCL REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -16,6 +20,7 @@ find_package(catkin REQUIRED COMPONENTS roscpp rospy)
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(include ${catkin_INCLUDE_DIRS})
+include_directories(${PCL_INCLUDE_DIRS})
 
 ## Declare a C++ library
 # add_library(carrt_goggles
@@ -30,7 +35,7 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 ## Declare a C++ executable
 add_executable(obstacle_detector src/obstacle_detector.cpp)
 ## Specify libraries to link a library or executable target against
-target_link_libraries(obstacle_detector ${catkin_LIBRARIES})
+target_link_libraries(obstacle_detector ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
