@@ -6,10 +6,6 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /Image1
-        - /PointCloud21/Status1
-        - /PointCloud22
-        - /PointCloud22/Status1
       Splitter Ratio: 0.55527
     Tree Height: 737
   - Class: rviz/Selection
@@ -30,7 +26,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: Image
+    SyncSource: PointCloud2
 Visualization Manager:
   Class: ""
   Displays:
@@ -136,10 +132,18 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Class: rviz/Marker
+      Enabled: false
+      Marker Topic: /ground_plane/visual_markers
+      Name: Marker
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: base_link
+    Fixed Frame: world
     Frame Rate: 30
   Name: root
   Tools:
@@ -160,22 +164,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 10.1771
+      Distance: 10.1414
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.794986
-        Y: 0.517433
-        Z: 0.579017
+        X: -1.16554
+        Y: 2.75071
+        Z: 1.02608
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.205204
+      Pitch: 0.610204
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.63411
+      Yaw: 3.75227
     Saved: ~
 Window Geometry:
   Displays:
@@ -196,4 +200,4 @@ Window Geometry:
     collapsed: false
   Width: 1887
   X: 55
-  Y: 14
+  Y: 1062

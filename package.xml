@@ -33,6 +33,9 @@
   <build_depend>rospy</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>libpcl-all-dev</build_depend>
+  <build_depend>tf</build_depend>
+  <build_depend>cmake_modules</build_depend>
+  <build_depend>tf_conversion</build_depend>
 
   <run_depend>stereo_image_proc</run_depend>
   <run_depend>face_recognition</run_depend>
