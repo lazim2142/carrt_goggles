@@ -1,0 +1,75 @@
+<launch>
+	<group ns="stereo">
+		<node pkg="usb_cam" type="usb_cam_node" name="left">
+			<param name="video_device" value="/dev/video0"/>
+			<param name="camera_frame_id" value="left_camera"/>
+			<param name="camera_name" value="left_camera"/>
+			<param name="image_width" value="1280"/>
+			<param name="image_height" value="960"/>
+		</node>
+
+		<node pkg="image_rotate" type="image_rotate" name="left_rotator">
+			<remap from="image" to="left/image_raw"/>
+			<remap from="rotated/image" to="left/image_rotated"/>
+			
+			<param name="input_frame_id" value="left_camera"/>
+			<param name="output_frame_id" value="left_camera_rotated"/>
+
+			<param name="target_frame_id" value=""/>
+			<param name="target_x" value="0.0"/>
+			<param name="target_y" value="1.0"/>
+			<param name="target_z" value="0.0"/>
+
+			<param name="source_x" value="1.0"/>
+			<param name="source_y" value="0.0"/>
+			<param name="source_z" value="0.0"/>
+		</node>
+
+		<node pkg="usb_cam" type="usb_cam_node" name="right">
+			<param name="video_device" value="/dev/video2"/>
+			<param name="camera_frame_id" value="right_camera"/>
+			<param name="camera_name" value="right_camera"/>
+			<param name="image_width" value="1280"/>
+			<param name="image_height" value="960"/>
+		</node>
+
+		<node pkg="image_rotate" type="image_rotate" name="right_rotator">
+			<remap from="image" to="right/image_raw"/>
+			<remap from="rotated/image" to="right/image_rotated"/>
+			
+			<param name="input_frame_id" value="right_camera"/>
+			<param name="output_frame_id" value="right_camera_rotated"/>
+
+			<param name="target_frame_id" value=""/>
+			<param name="target_x" value="0.0"/>
+			<param name="target_y" value="1.0"/>
+			<param name="target_z" value="0.0"/>
+
+			<param name="source_x" value="-1.0"/>
+			<param name="source_y" value="0.0"/>
+			<param name="source_z" value="0.0"/>
+		</node>
+
+		<node name="stereo_image_proc" pkg="stereo_image_proc" type="stereo_image_proc">
+			<remap from="left/image_raw" to="left/image_rotated"/>
+			<remap from="left/camera_info" to="left/camera_info"/>
+			<remap from="right/image_raw" to="right/image_rotated"/>
+			<remap from="right/camera_info" to="right/camera_info"/>
+		</node>
+
+
+
+		<!--node pkg="carrt_goggles" type="obstacle_detector" name="obstacle_detector" />
+
+		<node pkg="carrt_goggles" type="ground_plane" name="ground_plane" >
+			<param name="visualize" type="bool" value="true" />
+		</node-->
+	</group>
+
+	<node name="stereo_view" pkg="image_view" type="stereo_view">
+		<param name="approximate_sync" value="True"/>
+		<remap from="image" to="image_rect"/>
+	</node>
+
+	<!--node pkg="rviz" type="rviz" name="rviz" args="-d $(find carrt_goggles)/launch/usb_cam.rviz" /-->
+</launch>
