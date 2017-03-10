@@ -16,11 +16,6 @@
 
 	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find carrt_goggles)/launch/bagfile.rviz" />
 
-	<!--node name="stereo_view" pkg="image_view" type="stereo_view">
-		<remap from="image" to="image_rect"/>
-		<remap from="stereo" to="/"/>
-	</node-->
-
 	<node pkg="carrt_goggles" type="obstacle_detector" name="obstacle_detector" />
 
 	<node pkg="carrt_goggles" type="ground_plane" name="ground_plane" >
