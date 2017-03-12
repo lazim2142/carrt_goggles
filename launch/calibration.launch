@@ -3,57 +3,51 @@
 		<param name="video_device" value="/dev/video1"/>
 		<param name="camera_frame_id" value="left_camera"/>
 		<param name="camera_name" value="left"/>
-		<param name="image_width" value="640"/>
-		<param name="image_height" value="360"/>
+		<param name="image_width" value="1280"/>
+		<param name="image_height" value="1024"/>
+		<param name="pixel_format" value="yuyv"/>
 	</node>
-
-	<!--node pkg="image_rotate" type="image_rotate" name="left_rotator">
-		<remap from="image" to="left/image_raw"/>
-		<remap from="rotated/image" to="left/image_rotated"/>
-		
-		<param name="input_frame_id" value="left_camera"/>
-		<param name="output_frame_id" value="left_camera_rotated"/>
-
-		<param name="target_frame_id" value=""/>
-		<param name="target_x" value="0.0"/>
-		<param name="target_y" value="1.0"/>
-		<param name="target_z" value="0.0"/>
-
-		<param name="source_x" value="1.0"/>
-		<param name="source_y" value="0.0"/>
-		<param name="source_z" value="0.0"/>
-
-		<param name="output_image_size" value="1.0"/>
-	</node-->
 
 	<node pkg="usb_cam" type="usb_cam_node" name="right">
-		<param name="video_device" value="/dev/video0"/>
+		<param name="video_device" value="/dev/video2"/>
 		<param name="camera_frame_id" value="right_camera"/>
 		<param name="camera_name" value="right"/>
-		<param name="image_width" value="640"/>
-		<param name="image_height" value="360"/>
+		<param name="image_width" value="1280"/>
+		<param name="image_height" value="1024"/>
+		<param name="pixel_format" value="yuyv"/>
 	</node>
 
-	<!--node pkg="image_rotate" type="image_rotate" name="right_rotator">
-		<remap from="image" to="right/image_raw"/>
-		<remap from="rotated/image" to="right/image_rotated"/>
-		
-		<param name="input_frame_id" value="right_camera"/>
-		<param name="output_frame_id" value="right_camera_rotated"/>
+	<node pkg="nodelet" type="nodelet" args="standalone image_proc/crop_decimate" name="left_cropper">
+		<param name="x_offset" value="150" />
+		<param name="y_offset" value="150" />
+		<param name="width" value="980" />
+		<param name="height" value="724" />
 
-		<param name="target_frame_id" value=""/>
-		<param name="target_x" value="0.0"/>
-		<param name="target_y" value="1.0"/>
-		<param name="target_z" value="0.0"/>
+		<!-- remap input topics -->
+		<remap from="camera/image_raw" to="left/image_raw"/>
+		<remap from="camera/image_info" to="left/camera_info"/>
 
-		<param name="source_x" value="-1.0"/>
-		<param name="source_y" value="0.0"/>
-		<param name="source_z" value="0.0"/>
+		<!-- remap output topics -->
+		<remap from="camera_out/image_raw" to="left/cropped/image_cropped"/>
+		<remap from="camera_out/image_info" to="left/cropped/camera_info"/>
+	</node>
 
-		<param name="output_image_size" value="1.0"/>
-	</node-->		
+	<node pkg="nodelet" type="nodelet" args="standalone image_proc/crop_decimate" name="right_cropper">
+		<param name="x_offset" value="150" />
+		<param name="y_offset" value="150" />
+		<param name="width" value="980" />
+		<param name="height" value="724" />
 
-rosrun camera_calibration cameracalibrator.py --size 8x6 --square 0.02  --approximate=0.1 right:=/right/image_raw left:=/left/image_raw right_camera:=/right left_camera:=/left
+		<!-- remap input topics -->
+		<remap from="camera/image_raw" to="right/image_raw"/>
+		<remap from="camera/image_info" to="right/camera_info"/>
+
+		<!-- remap output topics -->
+		<remap from="camera_out/image_raw" to="right/cropped/image_cropped"/>
+		<remap from="camera_out/image_info" to="right/cropped/camera_info"/>
+	</node>
+
+rosrun camera_calibration cameracalibrator.py --size 8x6 --square 0.02  --approximate=0.1 right:=/right/cropped/image_cropped left:=/left/cropped/image_cropped right_camera:=/right left_camera:=/left
 
 rosrun camera_calibration cameracalibrator.py --size 8x6 --square 0.02 image:=/left/image_raw camera:=/left
 

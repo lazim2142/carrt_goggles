@@ -14,6 +14,9 @@ ros::Publisher vis_pub;
 ros::Publisher model_pub;
 bool visualize = true;
 
+tf::Transform ros_tf;   // Transform to publish
+
+
 void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& msg)
 {
     // Create the segmentation object
@@ -30,9 +33,9 @@ void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& msg)
     pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
     seg.segment (*inliers, *coefficients);
 
-    // Output error message if no planes found
-    if (inliers->indices.size() == 0)
-        PCL_ERROR ("Could not estimate a planar model for the given dataset.");
+    // Output error if the plane found is less than 1/3 of the point cloud
+    if (inliers->indices.size() < msg->points.size()/3.0)
+        PCL_ERROR ("Could not estimate a planar model for the given dataset.\n");
     else
     {
         float a = coefficients->values[0];
@@ -103,13 +106,12 @@ void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& msg)
         tf_ground_plane.translation() << transformed[0], transformed[1], transformed[2];
 
         // Convert Eigen Affine transform to a ROS transform
-        tf::Transform ros_tf;
         tf::transformEigenToTF(tf_ground_plane, ros_tf);
-
-        // Publish ROS transform
-        static tf::TransformBroadcaster br;
-        br.sendTransform(tf::StampedTransform(ros_tf, ros::Time::now(), "world", "stereo_camera"));
     }
+
+    // Publish ROS transform
+    static tf::TransformBroadcaster transform_br;
+    transform_br.sendTransform(tf::StampedTransform(ros_tf, ros::Time::now(), "world", "stereo_camera"));
 }
 
 int main(int argc, char **argv)

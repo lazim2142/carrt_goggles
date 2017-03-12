@@ -1,7 +1,7 @@
 <launch>
 	<param name="/use_sim_time" value="true" />
 
-	<node pkg="rosbag" type="play" name="rosbag_play" args="--loop --clock /home/muhaimen/ROS/bagfiles/stereo_outdoorA.bag" >
+	<node pkg="rosbag" type="play" name="rosbag_play" args="--rate=1.0 --loop --clock /home/muhaimen/ROS/bagfiles/stereo_outdoorA.bag" >
 		<remap from="/stereo_camera/left/camera_info_throttle" to="/left/camera_info" />
 		<remap from="/stereo_camera/right/camera_info_throttle" to="/right/camera_info" />
 		<remap from="/tf" to="/unused_tf" />
