@@ -2,10 +2,11 @@
 #include <pcl_ros/transforms.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/kdtree/kdtree.h>
 #include <pcl/filters/passthrough.h>
-#include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/extract_indices.h>
 #include <tf/transform_listener.h>
 #include <pcl/segmentation/extract_clusters.h>
 
@@ -38,52 +39,58 @@ void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& msg)
     // Apply voxel-grid filter
     pcl::VoxelGrid<pcl::PointXYZRGB> vox;
     vox.setInputCloud (cloud);
-    vox.setLeafSize (0.2f, 0.2f, 0.2f);
+    vox.setLeafSize (0.05f, 0.05f, 0.05f);
     vox.filter (*cloud);
 
     // Find K nearest points to the origin
-    int K = 25;
+    int K = 100;
     pcl::PointXYZRGB origin;    // defaults to (0,0,0)
     if (cloud->width > K)
     {        
         // KD tree to find nearest points
-        pcl::KdTreeFLANN<pcl::PointXYZRGB> kdtree;
-        kdtree.setInputCloud(cloud);
+        pcl::KdTreeFLANN<pcl::PointXYZRGB>::Ptr kdtree(new pcl::KdTreeFLANN<pcl::PointXYZRGB>(false));
+        kdtree->setInputCloud(cloud);
         std::vector<int> pointIdxNKNSearch(K);
         std::vector<float> pointNKNSquaredDistance(K);
 
-        pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> cluster_extractor;
-        cluster_extractor.setClusterTolerance (0.05);
-        cluster_extractor.setMinClusterSize (15);
-        cluster_extractor.setMaxClusterSize (25);
-        cluster_extractor.setSearchMethod (kdtree);
-        cluster_extractor.setInputCloud (cloud);
-
-        std::vector<pcl::PointIndices> cluster_indices;
-        cluster_extractor.extract (cluster_indices);
-
-        int j = 0;
-        for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin(); it != cluster_indices.end(); ++it)
+        // If at least K nearest points have been found
+        if (kdtree->nearestKSearch(origin, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0 )
         {
-            pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
-            for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
-                cloud_cluster->points.push_back (cloud_filtered->points[*pit]);
-            cloud_cluster->width = cloud_cluster->points.size();
-            cloud_cluster->height = 1;
-            cloud_cluster->is_dense = true;
+            // Filter out other points
+            pcl::ExtractIndices<pcl::PointXYZRGB> eifilter;
+            eifilter.setInputCloud(cloud);
+            pcl::PointIndices::Ptr nearest_points (new pcl::PointIndices());
+            nearest_points->indices = pointIdxNKNSearch;
+            eifilter.setIndices(nearest_points);
+            eifilter.setNegative(false);
+            eifilter.filter(*cloud);
 
-            std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
-            std::stringstream ss;
-            ss << "cloud_cluster_" << j << ".pcd";
-            writer.write<pcl::PointXYZ> (ss.str (), *cloud_cluster, false);
-            j++;
+            // Create Clustering object and set parameters
+            pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> cluster_extractor;
+            pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB>);
+            tree->setInputCloud (cloud);
+            cluster_extractor.setInputCloud(cloud);
+            cluster_extractor.setClusterTolerance (0.15f);
+            cluster_extractor.setMinClusterSize (0.5*K + 1);    // Ensures at most only one cluster is found
+            cluster_extractor.setMaxClusterSize (K);
+            cluster_extractor.setSearchMethod (tree);
+
+            // Extract Clusters
+            std::vector<pcl::PointIndices> cluster_indices;
+            cluster_extractor.extract(cluster_indices);
+
+            // If a cluster is found, profile its velocity
+            std::vector<pcl::PointIndices>::const_iterator cit = cluster_indices.begin();
+            if (cit != cluster_indices.end())
+            {
+                for (std::vector<int>::const_iterator pit = cit->indices.begin(); pit != cit->indices.end(); ++pit)
+                    cloud->points[*pit].rgb = *reinterpret_cast<float*>(&red);
+
+            }
         }
-
-        if (kdtree.nearestKSearch(origin, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0 )
-            for (size_t i = 0; i < pointIdxNKNSearch.size(); ++i)
-               cloud->points[pointIdxNKNSearch[i]].rgb = *reinterpret_cast<float*>(&red);
     }
 
+    // Visualize the origin with a blue point
     origin.rgb = *reinterpret_cast<float*>(&blue);
     cloud->points.push_back(origin);
     ++cloud->width;
