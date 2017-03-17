@@ -59,6 +59,4 @@
 
 rosrun camera_calibration cameracalibrator.py --size 8x6 --square 0.02  --approximate=0.1 right:=/right/cropped/image_raw left:=/left/cropped/image_raw right_camera:=/right left_camera:=/left
 
-rosrun camera_calibration cameracalibrator.py --size 8x6 --square 0.02  --approximate=0.1 right:=/right/cropped/image_cropped left:=/left/cropped/image_cropped right_camera:=/right left_camera:=/left
-
 </launch>

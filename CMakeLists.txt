@@ -15,7 +15,7 @@ link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
 ## Declare a C++ executable
-add_executable(obstacle_detector src/obstacle_detector.cpp)
+add_executable(obstacle_detector src/obstacle_detector.cpp src/collision_detector.cpp)
 add_executable(ground_plane src/ground_plane.cpp)
 
 ## Specify libraries to link a library or executable target against
