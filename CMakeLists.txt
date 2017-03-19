@@ -1,23 +1,25 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(carrt_goggles)
 
-## C++11
-#set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
+set(CMAKE_BUILD_TYPE Debug)
 
-find_package(catkin REQUIRED COMPONENTS cmake_modules roscpp rospy tf tf_conversions PCL pcl_ros cmake_modules)
+find_package(catkin REQUIRED COMPONENTS cmake_modules roscpp rospy tf tf_conversions pcl_ros sensor_msgs cv_bridge image_transport dynamic_reconfigure)
+generate_dynamic_reconfigure_options(cfg/Disparity.cfg)
+find_package(OpenCV 3)
+catkin_package(DEPENDS Eigen)
 
-catkin_package(
-    DEPENDS Eigen
-    )
-
-include_directories(include ${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS})
+include_directories(include ${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
+include_directories(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-## Declare a C++ executable
-add_executable(obstacle_detector src/obstacle_detector.cpp src/collision_detector.cpp)
-add_executable(ground_plane src/ground_plane.cpp)
 
-## Specify libraries to link a library or executable target against
+add_executable(obstacle_detector src/obstacle_detector.cpp src/collision_detector.cpp)
 target_link_libraries(obstacle_detector ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(ground_plane src/ground_plane.cpp)
 target_link_libraries(ground_plane ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Eigen_LIBRARIES})
+
+add_executable(fisheye_rect src/fisheye_rect.cpp)
+add_dependencies(fisheye_rect ${PROJECT_NAME}_gencfg)
+target_link_libraries(fisheye_rect ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
