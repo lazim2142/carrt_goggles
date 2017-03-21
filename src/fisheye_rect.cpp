@@ -8,7 +8,8 @@
 #include <ros/package.h>
 #include <iostream>
 #include <dynamic_reconfigure/server.h>
-#include <carrt_goggles/disparityConfig.h>
+#include <carrt_goggles/DisparityConfig.h>
+#include <pcl_ros/point_cloud.h>
 
 typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> StereoSyncPolicy;
 
@@ -18,31 +19,98 @@ cv::Vec3d T;
 cv::Vec4d D1, D2;
 cv::Mat R1, R2, P1, P2, Q;
 
-// Stereo Block Matcher
-cv::Ptr<cv::StereoBM> sbm = cv::StereoBM::create(96, 21);
+// Stereo Block Matchers
+cv::Ptr<cv::StereoBM> block_matcher = cv::StereoBM::create(96, 21);
+cv::Ptr<cv::StereoSGBM> sg_block_matcher = cv::StereoSGBM::create(0, 128, 21);
+
+// Point cloud publisher
+ros::Publisher point_cloud_pub;
+
+int y_offset = 0;   // Offset of the right image. Set by dynamic reconfigure.
+unsigned int sequence = 0;   // Point cloud header sequence
+bool use_sgbm = true;
 
 // Dynamic reconfigure callback
-void reconfigCallback(carrt_goggles::disparityConfig& config, uint32_t level)
+void reconfigCallback(carrt_goggles::DisparityConfig& config, uint32_t level)
 {
     // Tweak all settings to be valid
     config.prefilter_size |= 0x1; // must be odd
     config.block_size |= 0x1; // must be odd
     config.num_disparities = (config.num_disparities / 16) * 16; // must be multiple of 16
 
-    // Update block matcher
-    sbm->setPreFilterCap(config.prefilter_cap);
-    sbm->setPreFilterSize(config.prefilter_size);
+    // Select Block Matcher
+    use_sgbm = config.sgbm;
+    if(use_sgbm)
+    {
+        // Update SG block matcher
+        sg_block_matcher->setPreFilterCap(config.prefilter_cap);
+        sg_block_matcher->setUniquenessRatio(config.uniqueness_ratio);
 
-    sbm->setSmallerBlockSize(config.smaller_block_size);
-    sbm->setTextureThreshold(config.texture_threshold);
-    sbm->setUniquenessRatio(config.uniqueness_ratio);
+        sg_block_matcher->setBlockSize (config.block_size);
+        sg_block_matcher->setDisp12MaxDiff (config.disp12MaxDiff);
+        sg_block_matcher->setMinDisparity (config.min_disparity);
+        sg_block_matcher->setNumDisparities (config.num_disparities);
+        sg_block_matcher->setSpeckleRange (config.speckle_range);
+        sg_block_matcher->setSpeckleWindowSize (config.speckle_window_size);
 
-    sbm->setBlockSize (config.block_size);
-    sbm->setDisp12MaxDiff (config.disp12MaxDiff);
-    sbm->setMinDisparity (config.min_disparity);
-    sbm->setNumDisparities (config.num_disparities);
-    sbm->setSpeckleRange (config.speckle_range);
-    sbm->setSpeckleWindowSize (config.speckle_window_size);
+        sg_block_matcher->setP1(config.p1);
+        sg_block_matcher->setP1(config.p2);
+        sg_block_matcher->setMode(config.mode);
+    }
+    else
+    {
+        // Update block matcher
+        block_matcher->setPreFilterCap(config.prefilter_cap);
+        block_matcher->setPreFilterSize(config.prefilter_size);
+
+        block_matcher->setSmallerBlockSize(config.smaller_block_size);
+        block_matcher->setTextureThreshold(config.texture_threshold);
+        block_matcher->setUniquenessRatio(config.uniqueness_ratio);
+
+        block_matcher->setBlockSize (config.block_size);
+        block_matcher->setDisp12MaxDiff (config.disp12MaxDiff);
+        block_matcher->setMinDisparity (config.min_disparity);
+        block_matcher->setNumDisparities (config.num_disparities);
+        block_matcher->setSpeckleRange (config.speckle_range);
+        block_matcher->setSpeckleWindowSize (config.speckle_window_size);
+    }
+
+    y_offset = config.y_offset; // Y-offset of right image
+
+}
+
+void disparity2PCL(pcl::PointCloud<pcl::PointXYZRGB>& point_cloud, const cv::Mat& disparity)
+{
+    // Fill in new PointCloud message (2D image-like layout)
+    point_cloud.header.frame_id = "stereo";
+    pcl_conversions::toPCL(ros::Time::now(), point_cloud.header.stamp);
+    point_cloud.header.seq = sequence++;
+
+
+    point_cloud.height = 1;
+    point_cloud.is_dense = false; // there may be invalid points
+
+    // Calculate point cloud
+    cv::Mat points_mat;
+    cv::reprojectImageTo3D(disparity, points_mat, Q, true);
+
+    for (unsigned int u = 0; u < points_mat.rows; ++u)
+    {
+        for (unsigned int v = 0; v < points_mat.cols; ++v)
+        {
+            float z = points_mat.at<cv::Vec3f>(u, v)[2];
+            if(z != 10000 && !std::isinf(z))
+            {
+                pcl::PointXYZRGB point;
+                point.x = points_mat.at<cv::Vec3f>(u, v)[0]*50;
+                point.y = points_mat.at<cv::Vec3f>(u, v)[1]*50;
+                point.z = z*50;
+//                std::cout << point.x << "," << point.y << "," << point.z << std::endl;
+                point_cloud.points.push_back(point);
+            }
+        }
+    }
+    point_cloud.width = point_cloud.points.size();
 }
 
 void stereoCallback(const sensor_msgs::ImageConstPtr& left, const sensor_msgs::ImageConstPtr& right)
@@ -66,14 +134,26 @@ void stereoCallback(const sensor_msgs::ImageConstPtr& left, const sensor_msgs::I
     cv::remap(right_ptr->image, right_ptr->image, m1, m2, cv::INTER_LINEAR);
     cv::cvtColor(right_ptr->image, right_ptr->image, cv::COLOR_BGR2GRAY);
 
+    // Translate
+    cv::Mat trans_mat = (cv::Mat_<double>(2,3) << 1, 0, 0, 0, 1, y_offset);
+    cv::warpAffine(right_ptr->image,right_ptr->image,trans_mat,right_ptr->image.size());
+
     // Run Stereo Block Matching
     cv::Mat disparity;
-    sbm->compute(left_ptr->image, right_ptr->image, disparity);
-    normalize(disparity, disparity, 0, 255, CV_MINMAX, CV_8U);
+    if(use_sgbm)
+        sg_block_matcher->compute(left_ptr->image, right_ptr->image, disparity);
+    else
+        block_matcher->compute(left_ptr->image, right_ptr->image, disparity);
+
+    // Create and publish Point Cloud
+    pcl::PointCloud<pcl::PointXYZRGB> point_cloud;
+    disparity2PCL(point_cloud, disparity);
+    point_cloud_pub.publish(point_cloud);
 
     // Update visualization windows
     imshow("left", left_ptr->image);
     imshow("right", right_ptr->image);
+    normalize(disparity, disparity, 0, 255, CV_MINMAX, CV_8U);
     imshow("disparity", disparity);
 }
 
@@ -93,12 +173,13 @@ int main(int argc, char **argv)
     fs["P2"] >> P2;
     fs["R"] >> R;
     fs["P"] >> T;
+    fs["Q"] >> Q;
 
     ros::init(argc, argv, "fisheye_rect");
     ros::NodeHandle nh;
 
     // Dynamic Reconfigure
-    dynamic_reconfigure::Server<carrt_goggles::disparityConfig> reconfig_server;
+    dynamic_reconfigure::Server<carrt_goggles::DisparityConfig> reconfig_server;
     reconfig_server.setCallback(boost::bind(&reconfigCallback, _1, _2));
 
     // Sync incoming images
@@ -106,6 +187,9 @@ int main(int argc, char **argv)
     message_filters::Subscriber<sensor_msgs::Image> right_sub(nh, "/stereo/right/image_raw", 1);
     message_filters::Synchronizer<StereoSyncPolicy> sync(StereoSyncPolicy(10), left_sub, right_sub);
     sync.registerCallback(boost::bind(&stereoCallback, _1, _2));
+
+    // Point cloud publisher
+    point_cloud_pub = nh.advertise<pcl::PointCloud<pcl::PointXYZRGB> >("point_cloud", 1);
 
     // Visualization Windows
     cv::namedWindow("left");
