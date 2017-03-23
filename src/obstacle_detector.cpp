@@ -7,33 +7,39 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/extract_indices.h>
-#include <tf/transform_listener.h>
+#include <visualization_msgs/Marker.h>
 #include <pcl/segmentation/extract_clusters.h>
+#include "collision_detector.h"
+#include "std_msgs/String.h"
 
-ros::Publisher vis_pub;
-tf::TransformListener* tf_sub = NULL;
+ros::Publisher obst_cluster_pub;
+ros::Publisher obst_vector_pub;
+ros::Publisher obst_warning_pub;
 
 // Define Colors
 uint32_t red = ((uint32_t)255 << 16 | (uint32_t)0 << 8 | (uint32_t)0);
+uint32_t green = ((uint32_t)0 << 16 | (uint32_t)255 << 8 | (uint32_t)0);
 uint32_t blue = ((uint32_t)0 << 16 | (uint32_t)0 << 8 | (uint32_t)255);
 
 void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& msg)
 {
-    // Transform point cloud to world frame
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-    tf_sub->waitForTransform("/stereo_camera", "/world", ros::Time::now(), ros::Duration(1.0));
-    pcl_ros::transformPointCloud("/world", *msg, *cloud, *tf_sub);
 
-    // Filter out points less than 4 inches or more than 2m above the ground plane
+    // Filter out points below or more than 2m above the ground plane
     pcl::PassThrough<pcl::PointXYZRGB> filter;
-    filter.setInputCloud(cloud);
-    filter.setFilterFieldName("z");
-    filter.setFilterLimits(0.1016, 2.0);    // 4 inches = 0.1016 meters
+    filter.setInputCloud(msg);
+    filter.setFilterFieldName("y");
+    filter.setFilterLimits(0.0, 2.5);
     filter.filter(*cloud);
 
     // Filter out points more than 3 meters away
-    filter.setFilterFieldName("y");
+    filter.setFilterFieldName("z");
     filter.setFilterLimits(0, 3.0);
+    filter.filter(*cloud);
+
+    // Filter out points more than 1 meter to each side
+    filter.setFilterFieldName("x");
+    filter.setFilterLimits(-1, 1);
     filter.filter(*cloud);
 
     // Apply voxel-grid filter
@@ -79,34 +85,51 @@ void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& msg)
             std::vector<pcl::PointIndices> cluster_indices;
             cluster_extractor.extract(cluster_indices);
 
-            // If a cluster is found, profile its velocity
+            // If a cluster is found
             std::vector<pcl::PointIndices>::const_iterator cit = cluster_indices.begin();
             if (cit != cluster_indices.end())
             {
+                // Calculate cluster center
+                pcl::PointXYZRGB center;
                 for (std::vector<int>::const_iterator pit = cit->indices.begin(); pit != cit->indices.end(); ++pit)
+                {
                     cloud->points[*pit].rgb = *reinterpret_cast<float*>(&red);
+                    center.x += cloud->points[*pit].x;
+                    center.y += cloud->points[*pit].y;
+                    center.z += cloud->points[*pit].z;
+                }
+                center.x /= cit->indices.size();
+                center.y /= cit->indices.size();
+                center.z /= cit->indices.size();
 
+                // Pass cluster center into collision detector
+                add_obstacle(center);
+                pcl::PointXYZRGB collision_point;
+
+                std_msgs::String warning_msg;
+                warning_msg.data = "Obstacle Ahead";
+                if(checkCollision(collision_point))
+                    obst_warning_pub.publish(warning_msg);
             }
         }
     }
 
     // Visualize the origin with a blue point
-    origin.rgb = *reinterpret_cast<float*>(&blue);
     cloud->points.push_back(origin);
     ++cloud->width;
 
-    vis_pub.publish(cloud);
+    obst_cluster_pub.publish(cloud);
 }
 
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "obstacle_detector");
-
     ros::NodeHandle n;
-    tf_sub = new (tf::TransformListener);
 
-    ros::Subscriber sub = n.subscribe<pcl::PointCloud<pcl::PointXYZRGB> >("/points2", 1, pointCloudCallback);
-    vis_pub = n.advertise<pcl::PointCloud<pcl::PointXYZRGB> > ("obstacles", 1);
+    ros::Subscriber sub = n.subscribe<pcl::PointCloud<pcl::PointXYZRGB> >("stereo/point_cloud", 1, pointCloudCallback);
+    obst_cluster_pub = n.advertise<pcl::PointCloud<pcl::PointXYZRGB> > ("obstacles/cluster", 1);
+    obst_vector_pub = n.advertise<visualization_msgs::Marker> ("obstacles/vector", 1);
+    obst_warning_pub = n.advertise<std_msgs::String> ("obstacles/warning", 1);
 
     ros::spin();
 

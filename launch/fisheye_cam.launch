@@ -51,5 +51,6 @@
 		<param name="approximate_sync" value="true" />
 	</node>
 
-	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find carrt_goggles)/launch/fisheye.rviz" /-->
+	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find carrt_goggles)/launch/fisheye_cam
+	.rviz" /-->
 </launch>

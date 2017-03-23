@@ -10,7 +10,7 @@
 #include <tf_conversions/tf_eigen.h>
 #include <Eigen/Dense>
 
-ros::Publisher vis_pub;
+ros::Publisher obst_cluster_pub;
 ros::Publisher model_pub;
 bool visualize = true;
 
@@ -72,7 +72,7 @@ void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& msg)
                 }
             }
 
-            vis_pub.publish(plane_points);
+            obst_cluster_pub.publish(plane_points);
         }
 
         // Publish coefficients
@@ -125,7 +125,7 @@ int main(int argc, char **argv)
     ros::Subscriber sub = n.subscribe<pcl::PointCloud<pcl::PointXYZ> >("/points2", 1, pointCloudCallback);
     model_pub = n.advertise<pcl_msgs::ModelCoefficients> ("ground_plane/model_coefficients", 1);
     if(visualize)
-        vis_pub = n.advertise<visualization_msgs::Marker> ("ground_plane/visual_markers", 1);
+        obst_cluster_pub = n.advertise<visualization_msgs::Marker> ("ground_plane/visual_markers", 1);
 
     ros::spin();
 

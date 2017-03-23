@@ -14,7 +14,9 @@
 
 	<node name="stereo_image_proc" pkg="stereo_image_proc" type="stereo_image_proc" />
 
-	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find carrt_goggles)/launch/bagfile.rviz" />
+	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find carrt_goggles)/launch/outdoor_stereo.rviz" />
+
+	<node pkg="carrt_goggles" type="obstacle_detector" name="obstacle_detector" />
 
 	<node pkg="carrt_goggles" type="obstacle_detector" name="obstacle_detector" />
 

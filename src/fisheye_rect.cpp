@@ -23,8 +23,9 @@ cv::Mat R1, R2, P1, P2, Q;
 cv::Ptr<cv::StereoBM> block_matcher = cv::StereoBM::create(96, 21);
 cv::Ptr<cv::StereoSGBM> sg_block_matcher = cv::StereoSGBM::create(0, 128, 21);
 
-// Point cloud publisher
+// Publishers
 ros::Publisher point_cloud_pub;
+image_transport::Publisher left_rect, right_rect;
 
 int y_offset = 0;   // Offset of the right image. Set by dynamic reconfigure.
 unsigned int sequence = 0;   // Point cloud header sequence
@@ -102,10 +103,9 @@ void disparity2PCL(pcl::PointCloud<pcl::PointXYZRGB>& point_cloud, const cv::Mat
             if(z != 10000 && !std::isinf(z))
             {
                 pcl::PointXYZRGB point;
-                point.x = points_mat.at<cv::Vec3f>(u, v)[0]*50;
-                point.y = points_mat.at<cv::Vec3f>(u, v)[1]*50;
-                point.z = z*50;
-//                std::cout << point.x << "," << point.y << "," << point.z << std::endl;
+                point.x = points_mat.at<cv::Vec3f>(u, v)[0]*25 - 2.5;
+                point.y = points_mat.at<cv::Vec3f>(u, v)[1]*25 - 1.7;   // Average male eye-height
+                point.z = z*30;
                 point_cloud.points.push_back(point);
             }
         }
@@ -124,19 +124,29 @@ void stereoCallback(const sensor_msgs::ImageConstPtr& left, const sensor_msgs::I
     try {right_ptr = cv_bridge::toCvCopy(right, "bgr8");}
     catch (cv_bridge::Exception& e) { ROS_ERROR("%s", e.what()); return; }
 
-    // Undistort and convert to grayscale
+    // Calculate Knew
+    //cv::fisheye::estimateNewCameraMatrixForUndistortRectify(K1, D1, left_ptr->image.size(), R1, P1, 0, left_ptr->image.size(), 1.0);
+    //cv::fisheye::estimateNewCameraMatrixForUndistortRectify(K2, D2, right_ptr->image.size(), R2, P2, 0, right_ptr->image.size(), 1.0);
+
+    // Undistort
     cv::Mat m1, m2;
     cv::fisheye::initUndistortRectifyMap(K1,D1,R1,K1,left_ptr->image.size(), CV_32FC1, m1, m2);
     cv::remap(left_ptr->image, left_ptr->image, m1, m2, cv::INTER_LINEAR);
-    cv::cvtColor(left_ptr->image, left_ptr->image, cv::COLOR_BGR2GRAY);
 
     cv::fisheye::initUndistortRectifyMap(K2,D2,R2,K2,right_ptr->image.size(), CV_32FC1, m1, m2);
     cv::remap(right_ptr->image, right_ptr->image, m1, m2, cv::INTER_LINEAR);
-    cv::cvtColor(right_ptr->image, right_ptr->image, cv::COLOR_BGR2GRAY);
 
     // Translate
     cv::Mat trans_mat = (cv::Mat_<double>(2,3) << 1, 0, 0, 0, 1, y_offset);
     cv::warpAffine(right_ptr->image,right_ptr->image,trans_mat,right_ptr->image.size());
+
+    // Publish
+    left_rect.publish(left_ptr->toImageMsg());
+    right_rect.publish(right_ptr->toImageMsg());
+
+    // convert to grayscale
+    cv::cvtColor(left_ptr->image, left_ptr->image, cv::COLOR_BGR2GRAY);
+    cv::cvtColor(right_ptr->image, right_ptr->image, cv::COLOR_BGR2GRAY);
 
     // Run Stereo Block Matching
     cv::Mat disparity;
@@ -151,10 +161,8 @@ void stereoCallback(const sensor_msgs::ImageConstPtr& left, const sensor_msgs::I
     point_cloud_pub.publish(point_cloud);
 
     // Update visualization windows
-    imshow("left", left_ptr->image);
-    imshow("right", right_ptr->image);
-    normalize(disparity, disparity, 0, 255, CV_MINMAX, CV_8U);
-    imshow("disparity", disparity);
+//    normalize(disparity, disparity, 0, 255, CV_MINMAX, CV_8U);
+//    imshow("disparity", disparity);
 }
 
 
@@ -191,11 +199,14 @@ int main(int argc, char **argv)
     // Point cloud publisher
     point_cloud_pub = nh.advertise<pcl::PointCloud<pcl::PointXYZRGB> >("point_cloud", 1);
 
+    // Image publishers
+    image_transport::ImageTransport it(nh);
+    left_rect = it.advertise("left/image_rect", 1);
+    right_rect = it.advertise("right/image_rect", 1);
+
     // Visualization Windows
-    cv::namedWindow("left");
-    cv::namedWindow("right");
-    cv::namedWindow("disparity");
-    cv::startWindowThread();
+//    cv::namedWindow("disparity");
+//    cv::startWindowThread();
 
     ros::Rate loop_rate(30);
     while (nh.ok()) {

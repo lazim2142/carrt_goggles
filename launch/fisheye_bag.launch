@@ -1,0 +1,12 @@
+<launch>
+	<group ns="stereo">
+		<node pkg="rosbag" type="play" name="rosbag_play" args="--rate=0.1 --loop --clock /home/muhaimen/ROS/bagfiles/fisheye_cam_carrt_lab.bag" />
+
+		<node pkg="carrt_goggles" type="fisheye_rect" name="fisheye_rect" />
+
+		<!--node pkg="carrt_goggles" type="obstacle_detector" name="obstacle_detector" /-->
+
+	</group>
+
+	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find carrt_goggles)/launch/fisheye_bag.rviz" />
+</launch>
