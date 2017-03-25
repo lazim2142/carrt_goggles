@@ -4,6 +4,7 @@ OBST_HISTORY obst_history;
 
 extern uint32_t blue;
 extern ros::Publisher obst_vector_pub;
+int collision_count;
 
 void publishArrow(float x1, float y1, float z1, float x2, float y2, float z2)
 {
@@ -32,13 +33,13 @@ void publishArrow(float x1, float y1, float z1, float x2, float y2, float z2)
 void add_obstacle(const pcl::PointXYZRGB obs)
 {
     obst_history.push_back(std::make_pair(obs, ros::Time::now()));
-    if (obst_history.size() > 5)
+    if (obst_history.size() > 7)
         obst_history.pop_front();
 }
 
 bool checkCollision(pcl::PointXYZRGB& collision_point)
 {
-    if(obst_history.size() < 3)
+    if(obst_history.size() < 4)
         return false;
 
     // Create point cloud from history
@@ -58,7 +59,6 @@ bool checkCollision(pcl::PointXYZRGB& collision_point)
     // If the number of points is large enough
     if(inlier_indices.size() >= 3)
     {
-        std::cout << "Found enough inliers" << std::endl;
         // Get latest and earliest inlier indexes
         int earliest_idx = inlier_indices.front(), latest_idx = inlier_indices.front();
         for (int i = 0; i < inlier_indices.size(); ++i)
@@ -77,14 +77,14 @@ bool checkCollision(pcl::PointXYZRGB& collision_point)
 
         Eigen::Matrix4f numerator, denominator;
         numerator <<    1, 1, 1,  1,
-                        0, 0, 0, x1,
+                        1, 0, 0, x1,
                         0, 1, 0, y1,
-                        1, 0, 0, z1;
+                        0, 0, 0, z1;
 
         denominator <<  1, 1, 1, 0,
-                        0, 0, 0, x2-x1,
+                        1, 0, 0, x2-x1,
                         0, 1, 0, y2-y1,
-                        1, 0, 0, z2-z1;
+                        0, 0, 0, z2-z1;
 
         float t = -numerator.determinant()/denominator.determinant();
 
@@ -95,13 +95,29 @@ bool checkCollision(pcl::PointXYZRGB& collision_point)
         publishArrow(x1, y1, z1, collision_point.x, collision_point.y, collision_point.z);
 
         // Check if intercept is within region of interest
-        if (collision_point.x > -0.5 && collision_point.x < 0.5
-        &&  collision_point.y > 0 && collision_point.y < 2)
+        if (collision_point.x > -1 && collision_point.x < 1
+        &&  collision_point.y > 0 && collision_point.y < 2
+        &&  t > 0)
         {
-            std::cout << "Collision Detected" << std::endl;
+            collision_count = 0;
             return true;
+
+            if(++collision_count >= 3)
+            {
+                collision_count = 0;
+                return true;
+                // Check if velocity is high enough
+                float dist_diff = z2-z1;
+                float time_diff = (obst_history[latest_idx].second - obst_history[earliest_idx].second).toSec();
+                float speed = fabs(dist_diff/time_diff);
+                std::cout << speed << std::endl;
+                if(speed > 0.0)
+                {
+
+                }
+            }
         }
-        return true;
+        collision_count = 0;
     }
     return false;
 }

@@ -161,7 +161,7 @@ private:
 int main (int argc, char **argv)
 {
 
-ros::init(argc, argv, "subscribe_and_publish");
+ros::init(argc, argv, "audio_buffer");
 
 
 SubscribeAndPublish AudioSAP;

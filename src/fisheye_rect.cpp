@@ -161,8 +161,8 @@ void stereoCallback(const sensor_msgs::ImageConstPtr& left, const sensor_msgs::I
     point_cloud_pub.publish(point_cloud);
 
     // Update visualization windows
-//    normalize(disparity, disparity, 0, 255, CV_MINMAX, CV_8U);
-//    imshow("disparity", disparity);
+    normalize(disparity, disparity, 0, 255, CV_MINMAX, CV_8U);
+    imshow("disparity", disparity);
 }
 
 
@@ -205,8 +205,8 @@ int main(int argc, char **argv)
     right_rect = it.advertise("right/image_rect", 1);
 
     // Visualization Windows
-//    cv::namedWindow("disparity");
-//    cv::startWindowThread();
+    cv::namedWindow("disparity");
+    cv::startWindowThread();
 
     ros::Rate loop_rate(30);
     while (nh.ok()) {

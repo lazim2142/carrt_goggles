@@ -5,7 +5,7 @@
 		<remap from="camera" to="left" />
 		<remap from="set_camera_info" to="left/set_camera_info" />
 
-		<param name="device" value="/dev/video3"/>
+		<param name="device" value="/dev/video1"/>
 		<param name="camera_info_url" value="file://$(find carrt_goggles)/launch/left.yaml"/>
 
 		<param name="width" value="640"/>
@@ -13,7 +13,7 @@
 		<param name="fps" value="30"/>
 		<param name="frame_id" value="left"/>
 
-		<param name="exposure_absolute" value="120"/>
+		<param name="exposure_absolute" value="100"/>
 	</node>
 
 	<node pkg="uvc_camera" type="uvc_camera_node" name="right">
@@ -22,7 +22,7 @@
 		<remap from="camera" to="right" />
 		<remap from="set_camera_info" to="right/set_camera_info" />
 
-		<param name="device" value="/dev/video0"/>
+		<param name="device" value="/dev/video2"/>
 		<param name="camera_info_url" value="file://$(find carrt_goggles)/launch/right.yaml"/>
 
 		<param name="width" value="640"/>
@@ -30,7 +30,7 @@
 		<param name="fps" value="30"/>
 		<param name="frame_id" value="right"/>
 
-		<param name="exposure_absolute" value="120"/>
+		<param name="exposure_absolute" value="100"/>
 	</node>
 
 rosrun camera_calibration cameracalibrator.py --size 8x6 --square 0.02  --approximate=0.1 right:=/right/image_raw left:=/left/image_raw right_camera:=/right left_camera:=/left

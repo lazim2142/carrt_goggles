@@ -105,11 +105,12 @@ void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& msg)
                 // Pass cluster center into collision detector
                 add_obstacle(center);
                 pcl::PointXYZRGB collision_point;
-
-                std_msgs::String warning_msg;
-                warning_msg.data = "Obstacle Ahead";
                 if(checkCollision(collision_point))
+                {
+                    std_msgs::String warning_msg;
+                    warning_msg.data = "Obstacle at " + boost::lexical_cast<std::string>(center.z) + " meter.";
                     obst_warning_pub.publish(warning_msg);
+                }
             }
         }
     }
@@ -126,7 +127,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "obstacle_detector");
     ros::NodeHandle n;
 
-    ros::Subscriber sub = n.subscribe<pcl::PointCloud<pcl::PointXYZRGB> >("stereo/point_cloud", 1, pointCloudCallback);
+    ros::Subscriber sub = n.subscribe<pcl::PointCloud<pcl::PointXYZRGB> >("point_cloud", 1, pointCloudCallback);
     obst_cluster_pub = n.advertise<pcl::PointCloud<pcl::PointXYZRGB> > ("obstacles/cluster", 1);
     obst_vector_pub = n.advertise<visualization_msgs::Marker> ("obstacles/vector", 1);
     obst_warning_pub = n.advertise<std_msgs::String> ("obstacles/warning", 1);
