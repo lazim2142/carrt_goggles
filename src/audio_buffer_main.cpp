@@ -61,14 +61,24 @@ class Priority_Queue
 		free tmp;
 	   }
 	}
-}
+};
 */
 
 class SubscribeAndPublish
 {
- public:
- node *front;
- SubscribeAndPublish
+private:
+  ros::NodeHandle audio_buffer_node; 
+  
+  ros::Subscriber sub_1;
+  ros::Subscriber sub_2;
+  ros::Subscriber sub_3;
+  ros::Subscriber sub_4;
+  ros::Subscriber sub_5;
+  node *front;
+public:
+  ros::Publisher pub_;
+
+ SubscribeAndPublish()
  {
   //Topic Published
   pub_ = audio_buffer_node.advertise<std_msgs::String>("/robotsound", 1);
@@ -115,13 +125,13 @@ void publish()
 {
 	node *tmp;
 	if (front == NULL)
-		cout << "There are no messages \n";
+		std::cout << "There are no messages \n";
 	else
 	   {
 		pub_.publish(front->message);
 		tmp = front;		
 		front = front->link;
-		free tmp;
+		free(tmp);
 	   }
 }
 
@@ -147,14 +157,7 @@ void callback5(const std_msgs::String& input)
    insert(input, 5);
   }
 
-private:
-  ros::NodeHandle audio_buffer_node; 
-  ros::Publisher pub_;
-  ros::Subscriber sub_1;
-  ros::Subscriber sub_2;
-  ros::Subscriber sub_3;
-  ros::Subscriber sub_4;
-  ros::Subscriber sub_5;
+
 
 }; //End of Class
 
