@@ -86,30 +86,29 @@ void disparity2PCL(pcl::PointCloud<pcl::PointXYZRGB>& point_cloud, const cv::Mat
     point_cloud.header.frame_id = "stereo";
     pcl_conversions::toPCL(ros::Time::now(), point_cloud.header.stamp);
     point_cloud.header.seq = sequence++;
-
-
     point_cloud.height = 1;
     point_cloud.is_dense = false; // there may be invalid points
 
     // Calculate point cloud
-    cv::Mat points_mat;
-    cv::reprojectImageTo3D(disparity, points_mat, Q, true);
-
-    for (unsigned int u = 0; u < points_mat.rows; ++u)
-    {
-        for (unsigned int v = 0; v < points_mat.cols; ++v)
-        {
-            float z = points_mat.at<cv::Vec3f>(u, v)[2];
+    cv::Mat_<cv::Vec3f> points_mat(disparity.rows, disparity.cols);
+    cv::Mat_<double> vec_tmp(4,1);
+    for(int y=0; y<disparity.rows; ++y) {
+        for(int x=0; x<disparity.cols; ++x) {
+            vec_tmp(0)=x; vec_tmp(1)=y; vec_tmp(2)=disparity.at<double>(y,x); vec_tmp(3)=1;
+            vec_tmp = Q*vec_tmp;
+            vec_tmp /= vec_tmp(3);
+            pcl::PointXYZRGB point;
+            float z = vec_tmp(2);
             if(z != 10000 && !std::isinf(z))
             {
-                pcl::PointXYZRGB point;
-                point.x = points_mat.at<cv::Vec3f>(u, v)[0]*25 - 2.5;
-                point.y = points_mat.at<cv::Vec3f>(u, v)[1]*25 - 1.7;   // Average male eye-height
-                point.z = z*30;
+                point.x = vec_tmp(0) - 4 * z;
+                point.y = vec_tmp(1);
+                point.z = z;
                 point_cloud.points.push_back(point);
             }
         }
     }
+
     point_cloud.width = point_cloud.points.size();
 }
 
@@ -130,10 +129,10 @@ void stereoCallback(const sensor_msgs::ImageConstPtr& left, const sensor_msgs::I
 
     // Undistort
     cv::Mat m1, m2;
-    cv::fisheye::initUndistortRectifyMap(K1,D1,R1,K1,left_ptr->image.size(), CV_32FC1, m1, m2);
+    cv::fisheye::initUndistortRectifyMap(K1,D1,R1,K1,left_ptr->image.size(), CV_16SC2, m1, m2);
     cv::remap(left_ptr->image, left_ptr->image, m1, m2, cv::INTER_LINEAR);
 
-    cv::fisheye::initUndistortRectifyMap(K2,D2,R2,K2,right_ptr->image.size(), CV_32FC1, m1, m2);
+    cv::fisheye::initUndistortRectifyMap(K2,D2,R2,K2,right_ptr->image.size(), CV_16SC2, m1, m2);
     cv::remap(right_ptr->image, right_ptr->image, m1, m2, cv::INTER_LINEAR);
 
     // Translate
@@ -154,6 +153,7 @@ void stereoCallback(const sensor_msgs::ImageConstPtr& left, const sensor_msgs::I
         sg_block_matcher->compute(left_ptr->image, right_ptr->image, disparity);
     else
         block_matcher->compute(left_ptr->image, right_ptr->image, disparity);
+    disparity.convertTo(disparity, CV_64F, 1./16);
 
     // Create and publish Point Cloud
     pcl::PointCloud<pcl::PointXYZRGB> point_cloud;
@@ -163,6 +163,7 @@ void stereoCallback(const sensor_msgs::ImageConstPtr& left, const sensor_msgs::I
     // Update visualization windows
     normalize(disparity, disparity, 0, 255, CV_MINMAX, CV_8U);
     imshow("disparity", disparity);
+    cv::waitKey(3);
 }
 
 
