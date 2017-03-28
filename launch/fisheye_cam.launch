@@ -5,7 +5,7 @@
 		    <remap from="camera_info" to="left/camera_info" />
 		    <remap from="camera" to="left" />
 
-			<param name="device" value="/dev/video1"/>
+			<param name="device" value="/dev/video2"/>
 			<param name="camera_info_url" value="file://$(find carrt_goggles)/data/left.yaml"/>
 
 			<param name="width" value="640"/>
@@ -21,7 +21,7 @@
 			<remap from="camera_info" to="right/camera_info" />
 			<remap from="camera" to="right" />
 
-			<param name="device" value="/dev/video2"/>
+			<param name="device" value="/dev/video1"/>
 			<param name="camera_info_url" value="file://$(find carrt_goggles)/data/right.yaml"/>
 
 			<param name="width" value="640"/>
@@ -36,8 +36,10 @@
 
 		<!--node pkg="carrt_goggles" type="obstacle_detector" name="obstacle_detector" /-->
 
+		<node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure"/>
+		<node name="dynamic_reconfigure_load" pkg="dynamic_reconfigure" type="dynparam" args="load fisheye_rect $(find carrt_goggles)/cfg/fisheye_cam.yaml" />
+
 	</group>
 
-	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find carrt_goggles)/launch/fisheye_cam
-	.rviz" />
+	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find carrt_goggles)/launch/fisheye_cam.rviz" />
 </launch>
