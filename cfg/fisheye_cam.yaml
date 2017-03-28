@@ -1,51 +1,51 @@
 !!python/object/new:dynamic_reconfigure.encoding.Config
 dictitems:
-  block_size: 13
+  block_size: 11
   disp12MaxDiff: -1
   groups: !!python/object/new:dynamic_reconfigure.encoding.Config
     dictitems:
-      block_size: 13
+      block_size: 11
       disp12MaxDiff: -1
       groups: !!python/object/new:dynamic_reconfigure.encoding.Config
         state: []
       id: 0
-      min_disparity: 14
+      min_disparity: 1
       mode: false
       name: Default
-      num_disparities: 128
-      p1: 2114
-      p2: 5044
+      num_disparities: 96
+      p1: 5741
+      p2: 10000
       parameters: !!python/object/new:dynamic_reconfigure.encoding.Config
         state: []
       parent: 0
-      prefilter_cap: 6
-      prefilter_size: 19
+      prefilter_cap: 4
+      prefilter_size: 17
       sgbm: false
-      smaller_block_size: 0
+      smaller_block_size: 3
       speckle_range: 4
-      speckle_window_size: 506
+      speckle_window_size: 500
       state: true
       texture_threshold: 0
       type: ''
       uniqueness_ratio: 5.0
-      x_skew: -98.0
-      y_offset: -13
-      y_skew: -26.0
+      x_skew: 0.0
+      y_offset: -11
+      y_skew: 0.0
     state: []
-  min_disparity: 14
+  min_disparity: 1
   mode: false
-  num_disparities: 128
-  p1: 2114
-  p2: 5044
-  prefilter_cap: 6
-  prefilter_size: 19
+  num_disparities: 96
+  p1: 5741
+  p2: 10000
+  prefilter_cap: 4
+  prefilter_size: 17
   sgbm: false
-  smaller_block_size: 0
+  smaller_block_size: 3
   speckle_range: 4
-  speckle_window_size: 506
+  speckle_window_size: 500
   texture_threshold: 0
   uniqueness_ratio: 5.0
-  x_skew: -98.0
-  y_offset: -13
-  y_skew: -26.0
+  x_skew: 0.0
+  y_offset: -11
+  y_skew: 0.0
 state: []

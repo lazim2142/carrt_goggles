@@ -4,9 +4,9 @@ project(carrt_goggles)
 set(CMAKE_BUILD_TYPE Debug)
 find_package(catkin REQUIRED COMPONENTS cmake_modules roscpp rospy tf tf_conversions pcl_ros sensor_msgs cv_bridge image_transport dynamic_reconfigure)
 find_package(OpenCV 3 REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 generate_dynamic_reconfigure_options(cfg/Disparity.cfg)
-catkin_package(DEPENDS Eigen)
 
 include_directories(include ${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 include_directories(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
