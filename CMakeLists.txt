@@ -23,3 +23,6 @@ target_link_libraries(ground_plane ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Eigen_
 add_executable(fisheye_rect src/fisheye_rect.cpp)
 add_dependencies(fisheye_rect ${PROJECT_NAME}_gencfg)
 target_link_libraries(fisheye_rect ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+
+add_executable(audio_buffer src/audio_buffer_main.cpp)
+target_link_libraries(audio_buffer ${catkin_LIBRARIES})

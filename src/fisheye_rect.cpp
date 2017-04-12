@@ -28,7 +28,7 @@ ros::Publisher point_cloud_pub;
 image_transport::Publisher left_rect, right_rect;
 
 int y_offset = 0;   // Offset of the right image. Set by dynamic reconfigure.
-double x_skew, y_skew;
+double x_skew, y_skew, z_skew;
 unsigned int sequence = 0;   // Point cloud header sequence
 bool use_sgbm = true;
 
@@ -80,6 +80,7 @@ void reconfigCallback(carrt_goggles::DisparityConfig& config, uint32_t level)
     y_offset = config.y_offset; // Y-offset of right image
     x_skew = config.x_skew;
     y_skew = config.y_skew;
+    z_skew = config.z_skew;
 }
 
 void disparity2PCL(pcl::PointCloud<pcl::PointXYZRGB>& point_cloud, const cv::Mat& disparity)
@@ -103,9 +104,9 @@ void disparity2PCL(pcl::PointCloud<pcl::PointXYZRGB>& point_cloud, const cv::Mat
             float z = vec_tmp(2);
             if(z != 10000 && !std::isinf(z))
             {
-                point.x = vec_tmp(0) + x_skew*z;
-                point.y = vec_tmp(1) + y_skew*z;
-                point.z = z;
+                point.x = vec_tmp(0) + x_skew * z;
+                point.y = vec_tmp(1) + y_skew * z;
+                point.z = z_skew * z;
                 point_cloud.points.push_back(point);
             }
         }
@@ -165,7 +166,7 @@ void stereoCallback(const sensor_msgs::ImageConstPtr& left, const sensor_msgs::I
     // Update visualization windows
     normalize(disparity, disparity, 0, 255, CV_MINMAX, CV_8U);
     imshow("disparity", disparity);
-    cv::waitKey(3);
+    //cv::waitKey(3);
 }
 
 

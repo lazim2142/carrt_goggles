@@ -18,8 +18,6 @@
 
 	<node pkg="carrt_goggles" type="obstacle_detector" name="obstacle_detector" />
 
-	<node pkg="carrt_goggles" type="obstacle_detector" name="obstacle_detector" />
-
 	<node pkg="carrt_goggles" type="ground_plane" name="ground_plane" >
 		<param name="visualize" type="bool" value="true" />
 	</node>
