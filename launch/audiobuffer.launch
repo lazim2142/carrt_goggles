@@ -1,11 +1,7 @@
 <launch>
-
 	<node name="soundplay_node" pkg = "sound_play" type = "soundplay_node.py"/>
 	<node name="say" pkg = "sound_play" type = "say.py"/>
-	<node pkg= "audio_buffer" type = "audio_buffer_node" name = "audio_buffer_node" output ="screen"/>
-	<node name="talker" pkg = "audio_buffer" type = "talker.py"/>
-	<node name="talker_2" pkg = "audio_buffer" type = "talker_2.py"/>
-	<node name="talker_3" pkg = "audio_buffer" type = "talker_3.py"/>
-	<node name="talker_4" pkg = "audio_buffer" type = "talker_4.py"/>
-	<node name="talker_5" pkg = "audio_buffer" type = "talker_5.py"/>
+	<node pkg= "carrt_goggles" type = "audio_buffer_node" name = "audio_buffer_node">
+		<!--remap from="publish" to="robotsound" /-->
+	</node>
 </launch>

@@ -93,16 +93,15 @@ void disparity2PCL(pcl::PointCloud<pcl::PointXYZRGB>& point_cloud, const cv::Mat
     point_cloud.is_dense = false; // there may be invalid points
 
     // Calculate point cloud
-    cv::Mat_<cv::Vec3f> points_mat(disparity.rows, disparity.cols);
     cv::Mat_<double> vec_tmp(4,1);
-    for(int y=0; y<disparity.rows; ++y) {
+    for(int y=0; y < disparity.rows; ++y) {
         for(int x=0; x<disparity.cols; ++x) {
             vec_tmp(0)=x; vec_tmp(1)=y; vec_tmp(2)=disparity.at<double>(y,x); vec_tmp(3)=1;
             vec_tmp = Q*vec_tmp;
             vec_tmp /= vec_tmp(3);
             pcl::PointXYZRGB point;
             float z = vec_tmp(2);
-            if(z != 10000 && !std::isinf(z))
+            if(z * z_skew < 3)
             {
                 point.x = vec_tmp(0) + x_skew * z;
                 point.y = vec_tmp(1) + y_skew * z;
@@ -166,7 +165,7 @@ void stereoCallback(const sensor_msgs::ImageConstPtr& left, const sensor_msgs::I
     // Update visualization windows
     normalize(disparity, disparity, 0, 255, CV_MINMAX, CV_8U);
     imshow("disparity", disparity);
-    //cv::waitKey(3);
+    cv::waitKey(5);
 }
 
 
