@@ -11,6 +11,7 @@
 #include <carrt_goggles/DisparityConfig.h>
 #include <pcl_ros/point_cloud.h>
 
+
 typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> StereoSyncPolicy;
 
 // Camera Parameters
@@ -25,12 +26,14 @@ cv::Ptr<cv::StereoSGBM> sg_block_matcher = cv::StereoSGBM::create(0, 128, 21);
 
 // Publishers
 ros::Publisher point_cloud_pub;
-image_transport::Publisher left_rect, right_rect;
+image_transport::Publisher left_rect_pub, right_rect_pub, disparity_pub;
 
-int y_offset = 0;   // Offset of the right image. Set by dynamic reconfigure.
-double x_skew, y_skew, z_skew;
+// Dynamic Reconfigure Parameters
+int y_offset = 0;   // Vertical offset of the right image.
+double x_skew, y_skew, z_skew;  // Skew multiplier for point clouds.
+bool use_sgbm = false;
+
 unsigned int sequence = 0;   // Point cloud header sequence
-bool use_sgbm = true;
 
 // Dynamic reconfigure callback
 void reconfigCallback(carrt_goggles::DisparityConfig& config, uint32_t level)
@@ -83,46 +86,49 @@ void reconfigCallback(carrt_goggles::DisparityConfig& config, uint32_t level)
     z_skew = config.z_skew;
 }
 
-void disparity2PCL(pcl::PointCloud<pcl::PointXYZRGB>& point_cloud, const cv::Mat& disparity)
+void disparityCallback(const sensor_msgs::ImageConstPtr& disparity_image)
 {
+    // Convert to cv::Mat.
+    cv_bridge::CvImagePtr disparity = cv_bridge::toCvCopy(disparity_image, sensor_msgs::image_encodings::TYPE_16SC1);
+    disparity->image.convertTo(disparity->image, CV_32F, 1./16);
+    cv::Mat points_mat(disparity->image.size(), CV_32FC3);
+    cv::reprojectImageTo3D(disparity->image, points_mat, Q, true, CV_32F);
+
     // Fill in new PointCloud message (2D image-like layout)
+    pcl::PointCloud<pcl::PointXYZRGB> point_cloud;
+    point_cloud.points.reserve(disparity->image.rows * disparity->image.cols);
     point_cloud.header.frame_id = "stereo";
     pcl_conversions::toPCL(ros::Time::now(), point_cloud.header.stamp);
     point_cloud.header.seq = sequence++;
     point_cloud.height = 1;
     point_cloud.is_dense = false; // there may be invalid points
 
-    // Calculate point cloud
-    cv::Mat_<double> vec_tmp(4,1);
-    for(int y=0; y < disparity.rows; ++y) {
-        for(int x=0; x<disparity.cols; ++x) {
-            vec_tmp(0)=x; vec_tmp(1)=y; vec_tmp(2)=disparity.at<double>(y,x); vec_tmp(3)=1;
-            vec_tmp = Q*vec_tmp;
-            vec_tmp /= vec_tmp(3);
-            pcl::PointXYZRGB point;
-            float z = vec_tmp(2);
-            if(z * z_skew < 3)
-            {
-                point.x = vec_tmp(0) + x_skew * z;
-                point.y = vec_tmp(1) + y_skew * z;
-                point.z = z_skew * z;
+    for (unsigned int u = 0; u < points_mat.rows; ++u) {
+        for (unsigned int v = 0; v < points_mat.cols; ++v) {
+            float z = points_mat.at<cv::Vec3f>(u, v)[2];
+            if(z != 10000 && !std::isinf(z)) {
+                pcl::PointXYZRGB point;
+                point.x = points_mat.at<cv::Vec3f>(u, v)[0] + z*x_skew;
+                point.y = points_mat.at<cv::Vec3f>(u, v)[1] + z*y_skew - 1.6;   // Average eye-height in meters
+                point.z = z * z_skew;
                 point_cloud.points.push_back(point);
             }
         }
     }
 
     point_cloud.width = point_cloud.points.size();
+    point_cloud_pub.publish(point_cloud);
 }
 
 void stereoCallback(const sensor_msgs::ImageConstPtr& left, const sensor_msgs::ImageConstPtr& right)
 {
     // Parse ROS Message to opencv
-    cv_bridge::CvImagePtr left_ptr;
-    try {left_ptr = cv_bridge::toCvCopy(left, "bgr8");}
+    cv_bridge::CvImageConstPtr left_ptr;
+    try {left_ptr = cv_bridge::toCvShare(left, "");}
     catch (cv_bridge::Exception& e) { ROS_ERROR("%s", e.what()); return; }
 
-    cv_bridge::CvImagePtr right_ptr;
-    try {right_ptr = cv_bridge::toCvCopy(right, "bgr8");}
+    cv_bridge::CvImageConstPtr right_ptr;
+    try {right_ptr = cv_bridge::toCvShare(right, "");}
     catch (cv_bridge::Exception& e) { ROS_ERROR("%s", e.what()); return; }
 
     // Calculate Knew
@@ -141,31 +147,31 @@ void stereoCallback(const sensor_msgs::ImageConstPtr& left, const sensor_msgs::I
     cv::Mat trans_mat = (cv::Mat_<double>(2,3) << 1, 0, 0, 0, 1, y_offset);
     cv::warpAffine(right_ptr->image,right_ptr->image,trans_mat,right_ptr->image.size());
 
-    // Publish
-    left_rect.publish(left_ptr->toImageMsg());
-    right_rect.publish(right_ptr->toImageMsg());
+    // Publish Rectified Images
+    left_rect_pub.publish(left_ptr->toImageMsg());
+    right_rect_pub.publish(right_ptr->toImageMsg());
 
     // convert to grayscale
-    cv::cvtColor(left_ptr->image, left_ptr->image, cv::COLOR_BGR2GRAY);
-    cv::cvtColor(right_ptr->image, right_ptr->image, cv::COLOR_BGR2GRAY);
+    cv::Mat left_gray, right_gray;
+    cv::cvtColor(left_ptr->image, left_gray, cv::COLOR_BGR2GRAY);
+    cv::cvtColor(right_ptr->image, right_gray, cv::COLOR_BGR2GRAY);
 
     // Run Stereo Block Matching
     cv::Mat disparity;
     if(use_sgbm)
-        sg_block_matcher->compute(left_ptr->image, right_ptr->image, disparity);
+        sg_block_matcher->compute(left_gray, right_gray, disparity);
     else
-        block_matcher->compute(left_ptr->image, right_ptr->image, disparity);
-    disparity.convertTo(disparity, CV_64F, 1./16);
+        block_matcher->compute(left_gray, right_gray, disparity);
+//    ROS_INFO("%s", type2str(disparity.type()).c_str());
 
-    // Create and publish Point Cloud
-    pcl::PointCloud<pcl::PointXYZRGB> point_cloud;
-    disparity2PCL(point_cloud, disparity);
-    point_cloud_pub.publish(point_cloud);
 
-    // Update visualization windows
-    normalize(disparity, disparity, 0, 255, CV_MINMAX, CV_8U);
-    imshow("disparity", disparity);
-    cv::waitKey(5);
+    // Publish Disparity Image
+    //normalize(disparity, disparity, 0, 255, CV_MINMAX, CV_8U);
+    cv_bridge::CvImage disparity_image;
+    disparity_image.header = left->header; // Same timestamp and tf frame as left image
+    disparity_image.encoding = sensor_msgs::image_encodings::TYPE_16SC1;
+    disparity_image.image = disparity;
+    disparity_pub.publish(disparity_image.toImageMsg());
 }
 
 
@@ -195,25 +201,22 @@ int main(int argc, char **argv)
 
     // Sync incoming images
     message_filters::Subscriber<sensor_msgs::Image> left_sub(nh, "/stereo/left/image_raw", 1);
-    message_filters::Subscriber<sensor_msgs::Image> right_sub(nh, "/stereo/right/image_raw", 1);
+    message_filters::Subscriber<sensor_msgs::Image> right_sub(nh, "/stereo/right/image_raw", 1);    
     message_filters::Synchronizer<StereoSyncPolicy> sync(StereoSyncPolicy(10), left_sub, right_sub);
     sync.registerCallback(boost::bind(&stereoCallback, _1, _2));
+
+    // Subscribe to disparity image to generate pointcloud
+    ros::Subscriber disparity_sub = nh.subscribe("disparity", 1, disparityCallback);
 
     // Point cloud publisher
     point_cloud_pub = nh.advertise<pcl::PointCloud<pcl::PointXYZRGB> >("point_cloud", 1);
 
     // Image publishers
-    image_transport::ImageTransport it(nh);
-    left_rect = it.advertise("left/image_rect", 1);
-    right_rect = it.advertise("right/image_rect", 1);
+    image_transport::ImageTransport it(nh);    
+    left_rect_pub = it.advertise("left/image_rect", 1);
+    right_rect_pub = it.advertise("right/image_rect", 1);
+    disparity_pub = it.advertise("disparity", 1);
 
-    // Visualization Windows
-    cv::namedWindow("disparity");
-    cv::startWindowThread();
-
-    ros::Rate loop_rate(30);
-    while (nh.ok()) {
-        ros::spinOnce();
-        loop_rate.sleep();
-    }
+    ros::MultiThreadedSpinner mult_spinner(3);
+    mult_spinner.spin();
 }

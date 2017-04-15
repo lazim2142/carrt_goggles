@@ -9,12 +9,14 @@
 #include <pcl/filters/extract_indices.h>
 #include <visualization_msgs/Marker.h>
 #include <pcl/segmentation/extract_clusters.h>
+#include <sound_play/sound_play.h>
 #include "collision_detector.h"
 #include "std_msgs/String.h"
 
 ros::Publisher obst_cluster_pub;
 ros::Publisher obst_vector_pub;
 ros::Publisher obst_warning_pub;
+boost::shared_ptr<sound_play::SoundClient> sound_play_client_ptr;
 
 // Define Colors
 uint32_t red = ((uint32_t)255 << 16 | (uint32_t)0 << 8 | (uint32_t)0);
@@ -108,8 +110,9 @@ void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& msg)
                 if(checkCollision(collision_point))
                 {
                     std_msgs::String warning_msg;
-                    warning_msg.data = "Obstacle at " + boost::lexical_cast<std::string>(center.z) + " meter.";
+                    warning_msg.data = "Obstacle at " + boost::str(boost::format("%.1f") % center.z) + " meter.";
                     obst_warning_pub.publish(warning_msg);
+                    sound_play_client_ptr->say(warning_msg.data);
                 }
             }
         }
@@ -118,7 +121,6 @@ void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& msg)
     // Visualize the origin with a blue point
     cloud->points.push_back(origin);
     ++cloud->width;
-
     obst_cluster_pub.publish(cloud);
 }
 
@@ -126,6 +128,7 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "obstacle_detector");
     ros::NodeHandle n;
+    sound_play_client_ptr.reset(new sound_play::SoundClient());
 
     ros::Subscriber sub = n.subscribe<pcl::PointCloud<pcl::PointXYZRGB> >("point_cloud", 1, pointCloudCallback);
     obst_cluster_pub = n.advertise<pcl::PointCloud<pcl::PointXYZRGB> > ("obstacles/cluster", 1);
