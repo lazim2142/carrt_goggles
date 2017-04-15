@@ -119,11 +119,11 @@ int main (int argc, char **argv)
     ros::NodeHandle audio_buffer_node;
 
     pub_ = audio_buffer_node.advertise<std_msgs::String>("publish", 10);
-    sub_1 = audio_buffer_node.subscribe("textout", 2, callback1);
-    sub_2 = audio_buffer_node.subscribe("textout3", 2, callback2);
-    sub_3 = audio_buffer_node.subscribe("textout4", 2, callback3);
-    sub_4 = audio_buffer_node.subscribe("textout5", 2,callback4);
-    sub_5 = audio_buffer_node.subscribe("textout2", 2, callback5);
+    sub_1 = audio_buffer_node.subscribe("crosswalk_signal", 2, callback1);
+    sub_2 = audio_buffer_node.subscribe("obstacle", 2, callback2);
+    sub_3 = audio_buffer_node.subscribe("hazard", 2, callback3);
+    sub_4 = audio_buffer_node.subscribe("phone", 2,callback4);
+    sub_5 = audio_buffer_node.subscribe("friend", 2, callback5);
 
     ros::Rate loop_rate(.9);
 
