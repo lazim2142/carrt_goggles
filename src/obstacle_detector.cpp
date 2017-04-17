@@ -51,7 +51,7 @@ void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& msg)
     vox.filter (*cloud);
 
     // Find K nearest points to the origin
-    int K = 100;
+    int K = 70;
     pcl::PointXYZRGB origin;    // defaults to (0,0,0)
     if (cloud->width > K)
     {        

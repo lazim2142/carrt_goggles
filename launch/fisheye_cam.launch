@@ -13,7 +13,7 @@
 			<param name="fps" value="60"/>
 			<param name="frame_id" value="left"/>
 
-			<param name="exposure_absolute" value="120"/>
+			<param name="exposure_absolute" value="110"/>
 		</node>
 
 		<node pkg="uvc_camera" type="uvc_camera_node" name="right">
@@ -29,12 +29,12 @@
 			<param name="fps" value="60"/>
 			<param name="frame_id" value="right"/>
 
-			<param name="exposure_absolute" value="120"/>
+			<param name="exposure_absolute" value="110"/>
 		</node>
 
 		<node pkg="carrt_goggles" type="fisheye_rect" name="fisheye_rect" />
 
-		<node pkg="carrt_goggles" type="obstacle_detector" name="obstacle_detector" output="screen">
+		<node pkg="carrt_goggles" type="obstacle_detector" name="obstacle_detector">
 			<remap from="obstacles/warning" to="/audio_buffer/obstacle" />
 		</node>
 
