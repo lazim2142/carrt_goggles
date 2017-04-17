@@ -6,7 +6,7 @@ extern uint32_t blue;
 extern ros::Publisher obst_vector_pub;
 int collision_count;
 
-void publishArrow(float x1, float y1, float z1, float x2, float y2, float z2)
+void publishArrow(float x1, float y1, float z1, float x2, float y2, float z2, float r, float g, float b)
 {
     // Create Line List for visualization
     visualization_msgs::Marker  arrow;
@@ -18,7 +18,9 @@ void publishArrow(float x1, float y1, float z1, float x2, float y2, float z2)
     arrow.type = visualization_msgs::Marker::ARROW;
     arrow.scale.x = 0.05;
     arrow.scale.y = 0.1;
-    arrow.color.b = 1.0;
+    arrow.color.r = r;
+    arrow.color.g = g;
+    arrow.color.b = b;
     arrow.color.a = 1.0;
     arrow.ns = "obstacle_vector";
 
@@ -92,32 +94,20 @@ bool checkCollision(pcl::PointXYZRGB& collision_point)
         collision_point.y = y1 + (y2 - y1)*t;
         collision_point.z = z1 + (z2 - z1)*t;
 
-        publishArrow(x1, y1, z1, collision_point.x, collision_point.y, collision_point.z);
-
         // Check if intercept is within region of interest
-        if (collision_point.x > -1 && collision_point.x < 1
-        &&  collision_point.y > 0 && collision_point.y < 2
-        &&  t > 0)
-        {
-            collision_count = 0;
-            return true;
-
-            if(++collision_count >= 3)
-            {
+        if (collision_point.x > -0.5 && collision_point.x < 0.5
+        &&  collision_point.y > -2 && collision_point.y < 0
+        &&  t > 0) {
+            publishArrow(x1, y1, z1, collision_point.x, collision_point.y, collision_point.z, 1,0,0);
+            if(++collision_count >= 3) {
                 collision_count = 0;
                 return true;
-                // Check if velocity is high enough
-                float dist_diff = z2-z1;
-                float time_diff = (obst_history[latest_idx].second - obst_history[earliest_idx].second).toSec();
-                float speed = fabs(dist_diff/time_diff);
-                std::cout << speed << std::endl;
-                if(speed > 0.0)
-                {
-
-                }
             }
+        } else {
+            collision_count = 0;
+            publishArrow(x1, y1, z1, collision_point.x, collision_point.y, collision_point.z, 0,1,0);
         }
-        collision_count = 0;
     }
+
     return false;
 }

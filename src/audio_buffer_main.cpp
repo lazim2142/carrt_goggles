@@ -1,137 +1,128 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
-#include <iostream>
-#include <cstdio>
-#include <cstring>
-#include <cstdlib>
-#include <string>
+#include <sound_play/sound_play.h>
 
-ros::Publisher pub_;
+#define CROSSWALK_PRIORITY 1
+#define OBSTACLE_PRIORITY 2
+#define HAZARD_PRIORITY 3
+#define PHONE_PRIORITY 4
+#define FRIEND_PRIORITY 5
+
+sound_play::SoundClient* sc;
 ros::Subscriber sub_1;
 ros::Subscriber sub_2;
 ros::Subscriber sub_3;
 ros::Subscriber sub_4;
 ros::Subscriber sub_5;
 
-struct node
+class PriorityQueue
 {
-	int priority;
-	std_msgs::String message;
-	struct node* link;
-};
+private:
+    struct Node {
+        int priority;
+        std_msgs::String message;
+        struct Node* link = NULL;
+        Node(std_msgs::String s, int p)
+            : message(s), priority(p) {}
+    };
 
-class Priority_Queue
-{
-  private:
-	
-  public:
-	node *front;
-	Priority_Queue()
-	{
+    Node *front;
+    double pub_time;
+
+public:
+
+    PriorityQueue() {
 	   front = NULL;
 	}
 	
-	//Insert
-	void insert (std_msgs::String item, int priority)
-	{
-	   node *tmp, *q;
-	   tmp = new node;
-	   tmp->message = item;
-	   tmp->priority = priority;
-	   if (front == NULL || priority < front->priority)
-	   {
-		tmp->link = front;
-		front = tmp;
-	   }
-	   else
-	   {
-		q = front;
-		while (q->link != NULL && q->link->priority <= priority)
-		{	q = q->link;    }
-			tmp->link = q->link;
-			q->link = tmp;
-		
-	   }
+    void insert (std_msgs::String item, int priority) {
+        Node* insert_ptr = front;
+        while (insert_ptr != NULL && insert_ptr->priority < priority)
+            insert_ptr = insert_ptr->link;
+
+        if(insert_ptr == NULL){
+            Node* tmp = new Node(item, priority);
+            front = tmp;
+        } else if (priority == OBSTACLE_PRIORITY && insert_ptr->priority == OBSTACLE_PRIORITY) {
+            insert_ptr->message = item;
+        }
+        else {
+            Node* tmp = new Node(item, priority);
+            tmp->link = insert_ptr->link;
+            insert_ptr->link = tmp;
+        }
 	}
-	//Publish
-	void publish()
-	{
-	   node *tmp;
-	   if (front == NULL)
-		{
-			;
-		}
-	   else
-	   {
-		pub_.publish(front->message);
-		tmp = front;		
-		front = front->link;
-		free(tmp);
+
+    void publish() {
+       if (ros::Time::now().toSec() - pub_time > 1.0 && front != NULL) {
+            sc->say(front->message.data);
+            Node *tmp = front;
+            front = front->link;
+            delete tmp;
+            pub_time = ros::Time::now().toSec();
 	   }
 	}
 	
-    //Print
-	void printqueue()
-	{ 
-	node *print;
-	print = front;
-	while (print->link !=NULL)	
-	{
-		ROS_INFO("%s", print->message.data.c_str());
-		print = print->link;
-	}	
-	ROS_INFO ("/n");
-}
+    void printqueue() {
+        Node *print;
+        print = front;
+        ROS_INFO ("Audio Queue");
+        while (print != NULL) {
+            ROS_INFO("%s", print->message.data.c_str());
+            print = print->link;
+        }
+        ROS_INFO (" ");
+    }
 	
 };
 
-Priority_Queue pq;
+PriorityQueue pq;
 
-void callback1(const std_msgs::String input)
+void crosswalkCallback(const std_msgs::String input)
 {
-    pq.insert(input, 1);
+    pq.insert(input, CROSSWALK_PRIORITY);
     pq.printqueue();
 }
-void callback2(const std_msgs::String input2)
+
+void obstacleCallback(const std_msgs::String input2)
 {
-    pq.insert(input2, 2);
+    pq.insert(input2, OBSTACLE_PRIORITY);
     pq.printqueue();
 }
-void callback3(const std_msgs::String  input3)
+void hazardCallback(const std_msgs::String  input3)
 {
-    pq.insert(input3, 3);
+    pq.insert(input3, HAZARD_PRIORITY);
     pq.printqueue();
 }
-void callback4(const std_msgs::String input4)
+void phoneCallback(const std_msgs::String input4)
 {
-    pq.insert(input4, 4);
+    pq.insert(input4, PHONE_PRIORITY);
     pq.printqueue();
 }
-void callback5(const std_msgs::String input5)
+void friendCallback(const std_msgs::String input5)
 {
-    pq.insert(input5, 5);
+    pq.insert(input5, FRIEND_PRIORITY);
     pq.printqueue();
 }
 
 int main (int argc, char **argv)
 {
     ros::init(argc, argv, "audio_buffer");
-    ros::NodeHandle audio_buffer_node;
+    ros::NodeHandle nh;
+    sc = new sound_play::SoundClient();
 
-    pub_ = audio_buffer_node.advertise<std_msgs::String>("publish", 10);
-    sub_1 = audio_buffer_node.subscribe("crosswalk_signal", 2, callback1);
-    sub_2 = audio_buffer_node.subscribe("obstacle", 2, callback2);
-    sub_3 = audio_buffer_node.subscribe("hazard", 2, callback3);
-    sub_4 = audio_buffer_node.subscribe("phone", 2,callback4);
-    sub_5 = audio_buffer_node.subscribe("friend", 2, callback5);
+    sub_1 = nh.subscribe("crosswalk_signal", 2, crosswalkCallback);
+    sub_2 = nh.subscribe("obstacle", 1, obstacleCallback);
+    sub_3 = nh.subscribe("hazard", 2, hazardCallback);
+    sub_4 = nh.subscribe("phone", 2,phoneCallback);
+    sub_5 = nh.subscribe("friend", 2, friendCallback);
 
-    ros::Rate loop_rate(.9);
+    ros::Rate loop_rate(30);
 
     while (ros::ok()) {
         pq.publish();
         ros::spinOnce();
         loop_rate.sleep();
     }
-    ros::spin();
     return 0;
 }

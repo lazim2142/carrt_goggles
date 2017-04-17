@@ -22,7 +22,7 @@
 		<remap from="camera" to="right" />
 		<remap from="set_camera_info" to="right/set_camera_info" />
 
-		<param name="device" value="/dev/video0"/>
+		<param name="device" value="/dev/video2"/>
 		<param name="camera_info_url" value="file://$(find carrt_goggles)/launch/right.yaml"/>
 
 		<param name="width" value="640"/>
@@ -34,5 +34,7 @@
 	</node>
 
 rosrun camera_calibration cameracalibrator.py --size 8x6 --square 0.025 --approximate=0.1 right:=/right/image_raw left:=/left/image_raw right_camera:=/right left_camera:=/left
+
+rosbag record -O subset /left/camera_info /left/image_raw /right/camera_info /right/image_raw
 
 </launch>

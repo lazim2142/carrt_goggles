@@ -21,6 +21,8 @@ uint32_t red = ((uint32_t)255 << 16 | (uint32_t)0 << 8 | (uint32_t)0);
 uint32_t green = ((uint32_t)0 << 16 | (uint32_t)255 << 8 | (uint32_t)0);
 uint32_t blue = ((uint32_t)0 << 16 | (uint32_t)0 << 8 | (uint32_t)255);
 
+int close_obstacle_count = 0;
+
 void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& msg)
 {
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -29,7 +31,7 @@ void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& msg)
     pcl::PassThrough<pcl::PointXYZRGB> filter;
     filter.setInputCloud(msg);
     filter.setFilterFieldName("y");
-    filter.setFilterLimits(0.0, 2.5);
+    filter.setFilterLimits(0.0, 2.0);
     filter.filter(*cloud);
 
     // Filter out points more than 3 meters away
@@ -39,7 +41,7 @@ void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& msg)
 
     // Filter out points more than 1 meter to each side
     filter.setFilterFieldName("x");
-    filter.setFilterLimits(-1, 1);
+    filter.setFilterLimits(-0.5, 0.5);
     filter.filter(*cloud);
 
     // Apply voxel-grid filter
@@ -105,16 +107,25 @@ void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& msg)
                 // Pass cluster center into collision detector
                 add_obstacle(center);
                 pcl::PointXYZRGB collision_point;
-                if(checkCollision(collision_point))
+                bool center_is_close = center.x > -0.25 && center.x < 0.25 && center.y > -2 && center.y < 0 && center.z < 0.7;
+                if(center_is_close)
+                    close_obstacle_count = std::min(close_obstacle_count + 2, 6);
+
+                if(checkCollision(collision_point) || close_obstacle_count > 3)
                 {
                     std_msgs::String warning_msg;
-                    warning_msg.data = boost::str(boost::format("%.1f") % center.z);
+//                    warning_msg.data = boost::str(boost::format("%.1f") % center.z);
+                    warning_msg.data = boost::lexical_cast<std::string>((int)(center.z * 10));
                     obst_warning_pub.publish(warning_msg);
-                    //sound_play_client_ptr->say(warning_msg.data);
                 }
             }
         }
     }
+
+    if (--close_obstacle_count < 0)
+        close_obstacle_count = 0;
+
+    ROS_INFO("Close obstacle count: %d", close_obstacle_count);
 
     // Visualize the origin with a blue point
     cloud->points.push_back(origin);

@@ -29,8 +29,10 @@ ros::Publisher point_cloud_pub;
 image_transport::Publisher left_rect_pub, right_rect_pub, disparity_pub;
 
 // Dynamic Reconfigure Parameters
-int y_offset = 0;   // Vertical offset of the right image.
+int right_img_y_offset = 0;   // Vertical offset of the right image.
 double x_skew, y_skew, z_skew;  // Skew multiplier for point clouds.
+double x_scale, y_scale;  // scale multiplier for point clouds.
+double y_offset;  // scale multiplier for point clouds.
 bool use_sgbm = false;
 
 unsigned int sequence = 0;   // Point cloud header sequence
@@ -80,10 +82,15 @@ void reconfigCallback(carrt_goggles::DisparityConfig& config, uint32_t level)
         block_matcher->setSpeckleWindowSize (config.speckle_window_size);
     }
 
-    y_offset = config.y_offset; // Y-offset of right image
+    right_img_y_offset = config.right_img_y_offset; // Y-offset of right image
     x_skew = config.x_skew;
     y_skew = config.y_skew;
     z_skew = config.z_skew;
+
+    x_scale = config.x_scale;
+    y_scale = config.y_scale;
+
+    y_offset = config.y_offset;
 }
 
 void disparityCallback(const sensor_msgs::ImageConstPtr& disparity_image)
@@ -108,8 +115,8 @@ void disparityCallback(const sensor_msgs::ImageConstPtr& disparity_image)
             float z = points_mat.at<cv::Vec3f>(u, v)[2];
             if(z != 10000 && !std::isinf(z)) {
                 pcl::PointXYZRGB point;
-                point.x = points_mat.at<cv::Vec3f>(u, v)[0] + z*x_skew;
-                point.y = points_mat.at<cv::Vec3f>(u, v)[1] + z*y_skew - 1.6;   // Average eye-height in meters
+                point.x = (points_mat.at<cv::Vec3f>(u, v)[0] + z*x_skew) / ((z+1)*x_scale);
+                point.y = (points_mat.at<cv::Vec3f>(u, v)[1] + z*y_skew) / ((z+1)*y_scale) - y_offset;   // Average eye-height in meters
                 point.z = z * z_skew;
                 point_cloud.points.push_back(point);
             }
@@ -144,7 +151,7 @@ void stereoCallback(const sensor_msgs::ImageConstPtr& left, const sensor_msgs::I
     cv::remap(right_ptr->image, right_ptr->image, m1, m2, cv::INTER_LINEAR);
 
     // Translate
-    cv::Mat trans_mat = (cv::Mat_<double>(2,3) << 1, 0, 0, 0, 1, y_offset);
+    cv::Mat trans_mat = (cv::Mat_<double>(2,3) << 1, 0, 0, 0, 1, right_img_y_offset);
     cv::warpAffine(right_ptr->image,right_ptr->image,trans_mat,right_ptr->image.size());
 
     // Publish Rectified Images
@@ -212,7 +219,7 @@ int main(int argc, char **argv)
     point_cloud_pub = nh.advertise<pcl::PointCloud<pcl::PointXYZRGB> >("point_cloud", 1);
 
     // Image publishers
-    image_transport::ImageTransport it(nh);    
+    image_transport::ImageTransport it(nh);
     left_rect_pub = it.advertise("left/image_rect", 1);
     right_rect_pub = it.advertise("right/image_rect", 1);
     disparity_pub = it.advertise("disparity", 1);

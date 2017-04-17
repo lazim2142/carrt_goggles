@@ -16,7 +16,6 @@ bool visualize = true;
 
 tf::Transform ros_tf;   // Transform to publish
 
-
 void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& msg)
 {
     // Create the segmentation object
@@ -117,7 +116,6 @@ void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& msg)
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "ground_plane");
-
     ros::NodeHandle n;
 
     ros::param::get("~visualize", visualize);
