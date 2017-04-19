@@ -8,9 +8,10 @@
 		<param name="exposure_absolute" value="120" />
 	</node>
 
+	<arg name="command" />
 	<node pkg="carrt_goggles" type="face_rec" name="face_rec" output="screen">
 		<remap from="face_rec/image_raw" to="image_raw" />
-		<param name="cmd" value="recognize"/>
+		<param name="cmd" value="$(arg command)"/>
 		<param name="visualize" value="true"/>
 	</node>
 
