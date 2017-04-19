@@ -51,7 +51,7 @@ void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& msg)
     vox.filter (*cloud);
 
     // Find K nearest points to the origin
-    int K = 70;
+    int K = 50;
     pcl::PointXYZRGB origin;    // defaults to (0,0,0)
     if (cloud->width > K)
     {        
@@ -109,7 +109,7 @@ void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& msg)
                 pcl::PointXYZRGB collision_point;
                 bool center_is_close = center.x > -0.25 && center.x < 0.25 && center.y > -2 && center.y < 0 && center.z < 0.7;
                 if(center_is_close)
-                    close_obstacle_count = std::min(close_obstacle_count + 2, 6);
+                    close_obstacle_count = std::min(close_obstacle_count + 4, 6);
 
                 if(checkCollision(collision_point) || close_obstacle_count > 3)
                 {

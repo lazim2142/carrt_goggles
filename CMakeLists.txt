@@ -26,3 +26,6 @@ target_link_libraries(fisheye_rect ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 add_executable(audio_buffer_node src/audio_buffer_main.cpp)
 target_link_libraries(audio_buffer_node ${catkin_LIBRARIES})
+
+add_executable(face_rec src/face_rec.cpp)
+target_link_libraries(face_rec ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})

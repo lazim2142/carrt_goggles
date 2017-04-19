@@ -1,6 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
 <launch>
 	<group ns="stereo">
-		<node pkg="rosbag" type="play" name="rosbag_play" args="--rate=1.0 --loop --clock /home/muhaimen/ROS/bagfiles/sunday1.bag" >
+		<node pkg="rosbag" type="play" name="rosbag_play" args="--rate=1.0 --loop --clock /home/muhaimen/ROS/bagfiles/stoplight.bag" >
 			<remap from="/left/image_raw" to="/stereo/left/image_raw" />
 			<remap from="/left/camera_info" to="/stereo/left/camera_info" />
 			<remap from="/right/image_raw" to="/stereo/right/image_raw" />
