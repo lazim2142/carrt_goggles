@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<launch>
+	<node pkg="uvc_camera" type="uvc_camera_node" name="camera">
+		<param name="device" value="/dev/video0"/>
+		<param name="width" value="640"/>
+		<param name="height" value="480"/>
+		<param name="fps" value="30"/>
+		<param name="exposure_absolute" value="120" />
+	</node>
+
+	<node pkg="carrt_goggles" type="face_rec" name="face_rec" output="screen">
+		<remap from="face_rec/image_raw" to="image_raw" />
+		<param name="cmd" value="recognize"/>
+		<param name="visualize" value="true"/>
+	</node>
+
+</launch>

@@ -1,12 +1,38 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no" ?>
 <launch>
 	<node pkg="uvc_camera" type="uvc_camera_node" name="left">
-		<param name="device" value="/dev/video0"/>
+		<remap from="image_raw" to="left/image_raw" />
+	    <remap from="camera_info" to="left/camera_info" />
+		<remap from="camera" to="left" />
+
+		<param name="device" value="/dev/video1"/>
 		<param name="width" value="640"/>
 		<param name="height" value="480"/>
 		<param name="fps" value="30"/>
-		<param name="exposure_absolute" value="150" />
+		<param name="exposure_absolute" value="100" />
 	</node>
 
-	<node pkg="carrt_goggles" type="face_rec" name="face_rec" output="screen" args="recognize"/>
+	<node pkg="uvc_camera" type="uvc_camera_node" name="right">
+		<remap from="image_raw" to="right/image_raw" />
+		<remap from="camera_info" to="right/camera_info" />
+		<remap from="camera" to="right" />
+
+		<param name="device" value="/dev/video2"/>
+		<param name="width" value="640"/>
+		<param name="height" value="480"/>
+		<param name="fps" value="30"/>
+		<param name="exposure_absolute" value="100" />
+	</node>
+
+	<node pkg="carrt_goggles" type="fisheye_rect" name="fisheye_rect" >
+		<remap from="/stereo/left/image_raw" to="/left/image_raw" />
+		<remap from="/stereo/right/image_raw" to="/right/image_raw" />
+	</node>	
+
+	<node pkg="carrt_goggles" type="face_rec" name="face_rec" output="screen">
+		<remap from="face_rec/image_raw" to="left/image_rect" />
+		<param name="cmd" value="recognize"/>
+		<param name="visualize" value="true"/>
+	</node>
+
 </launch>
