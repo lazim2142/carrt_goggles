@@ -23,30 +23,34 @@ uint32_t blue = ((uint32_t)0 << 16 | (uint32_t)0 << 8 | (uint32_t)255);
 
 int close_obstacle_count = 0;
 
+pcl::PassThrough<pcl::PointXYZRGB> x_filter, y_filter, z_filter;
+pcl::VoxelGrid<pcl::PointXYZRGB> vox;
 void pointCloudCallback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& msg)
 {
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-
-    // Filter out points below or more than 2m above the ground plane
-    pcl::PassThrough<pcl::PointXYZRGB> filter;
-    filter.setInputCloud(msg);
-    filter.setFilterFieldName("y");
-    filter.setFilterLimits(0.0, 2.0);
-    filter.filter(*cloud);
+    // Filter out points more than 1 meter to each side
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud3(new pcl::PointCloud<pcl::PointXYZRGB>());
+    x_filter.setInputCloud(msg);
+    x_filter.setFilterFieldName("x");
+    x_filter.setFilterLimits(-0.5, 0.5);
+    x_filter.filter(*cloud3);
 
     // Filter out points more than 3 meters away
-    filter.setFilterFieldName("z");
-    filter.setFilterLimits(0, 3.0);
-    filter.filter(*cloud);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud2(new pcl::PointCloud<pcl::PointXYZRGB>());
+    y_filter.setInputCloud(cloud3);
+    y_filter.setFilterFieldName("y");
+    y_filter.setFilterLimits(-2, 0);
+    y_filter.filter(*cloud2);
 
-    // Filter out points more than 1 meter to each side
-    filter.setFilterFieldName("x");
-    filter.setFilterLimits(-0.5, 0.5);
-    filter.filter(*cloud);
+    // Filter out points below or more than 2m above the ground plane
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud1(new pcl::PointCloud<pcl::PointXYZRGB>);
+    z_filter.setInputCloud(cloud2);
+    z_filter.setFilterFieldName("z");
+    z_filter.setFilterLimits(0, 3.0);
+    z_filter.filter(*cloud1);
 
     // Apply voxel-grid filter
-    pcl::VoxelGrid<pcl::PointXYZRGB> vox;
-    vox.setInputCloud (cloud);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
+    vox.setInputCloud (cloud1);
     vox.setLeafSize (0.05f, 0.05f, 0.05f);
     vox.filter (*cloud);
 

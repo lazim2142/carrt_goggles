@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no" ?>
 <launch>
 	<group ns="stereo">
-		<node pkg="rosbag" type="play" name="rosbag_play" args="--rate=1.0 --loop --clock /home/muhaimen/ROS/bagfiles/stoplight.bag" >
+		<node pkg="rosbag" type="play" name="rosbag_play" args="--rate=1.0 --loop --clock /home/muhaimen/ROS/bagfiles/subset16.bag" >
 			<remap from="/left/image_raw" to="/stereo/left/image_raw" />
 			<remap from="/left/camera_info" to="/stereo/left/camera_info" />
 			<remap from="/right/image_raw" to="/stereo/right/image_raw" />
@@ -14,15 +14,14 @@
 			<remap from="obstacles/warning" to="/audio_buffer/obstacle" />
 		</node>
 
-		<node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure"/>
+		<!--node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure"/-->
 		<node name="dynamic_reconfigure_load" pkg="dynamic_reconfigure" type="dynparam" args="load fisheye_rect $(find carrt_goggles)/cfg/fisheye_cam.yaml" />
 	</group>
 
-	<group ns="audio_buffer">
+	<!--group ns="audio_buffer">
 		<node name="soundplay_node" pkg = "sound_play" type = "soundplay_node.py"/>
-		<!--node name="say" pkg = "carrt_goggles" type = "say.py"/-->
 		<node pkg= "carrt_goggles" type = "audio_buffer_node" name = "audio_buffer_node"/>
-	</group>
+	</group-->
 
 	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find carrt_goggles)/launch/fisheye_bag.rviz" />
 </launch>

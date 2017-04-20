@@ -185,7 +185,7 @@ void stereoCallback(const sensor_msgs::ImageConstPtr& left, const sensor_msgs::I
 int main(int argc, char **argv)
 {
     // Read calibration info from yaml.
-    std::string calib_path = ros::package::getPath("carrt_goggles") + "/data/cam_stereo.yml";
+    std::string calib_path = ros::package::getPath("carrt_goggles") + "/data/shamsi_head_720p.yml";
     cv::FileStorage fs(calib_path, cv::FileStorage::READ);
     fs["K1"] >> K1;
     fs["K2"] >> K2;
