@@ -169,11 +169,8 @@ void stereoCallback(const sensor_msgs::ImageConstPtr& left, const sensor_msgs::I
         sg_block_matcher->compute(left_gray, right_gray, disparity);
     else
         block_matcher->compute(left_gray, right_gray, disparity);
-//    ROS_INFO("%s", type2str(disparity.type()).c_str());
-
 
     // Publish Disparity Image
-    //normalize(disparity, disparity, 0, 255, CV_MINMAX, CV_8U);
     cv_bridge::CvImage disparity_image;
     disparity_image.header = left->header; // Same timestamp and tf frame as left image
     disparity_image.encoding = sensor_msgs::image_encodings::TYPE_16SC1;
@@ -185,7 +182,7 @@ void stereoCallback(const sensor_msgs::ImageConstPtr& left, const sensor_msgs::I
 int main(int argc, char **argv)
 {
     // Read calibration info from yaml.
-    std::string calib_path = ros::package::getPath("carrt_goggles") + "/data/shamsi_head_720p.yml";
+    std::string calib_path = ros::package::getPath("carrt_goggles") + "/data/shamsi_head_480p.yml";
     cv::FileStorage fs(calib_path, cv::FileStorage::READ);
     fs["K1"] >> K1;
     fs["K2"] >> K2;

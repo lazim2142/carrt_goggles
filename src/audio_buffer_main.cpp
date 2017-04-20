@@ -54,7 +54,7 @@ public:
 	}
 
     void publish() {
-       if (ros::Time::now().toSec() - pub_time > 1.0 && front != NULL) {
+       if (ros::Time::now().toSec() - pub_time > 1.5 && front != NULL) {
             sc->say(front->message.data);
             Node *tmp = front;
             front = front->link;

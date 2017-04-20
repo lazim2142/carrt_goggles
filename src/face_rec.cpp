@@ -70,10 +70,11 @@ void recognizeCallback(const sensor_msgs::ImageConstPtr& image) {
 
         // if recognized
         if(prediction >= 0) {
-            hash_2_seen_time[prediction] = ros::Time::now().toSec();
-            hash_2_counter[prediction] = std::max(hash_2_counter[prediction] + 2, 10);
+            hash_2_counter[prediction] = std::min(hash_2_counter[prediction] + 2, 25);
 
-            if(hash_2_counter[prediction] > 7) {
+            double time_since_last_seen = ros::Time::now().toSec() - hash_2_seen_time[prediction];
+            if(hash_2_counter[prediction] > 20 && time_since_last_seen > 17) {
+                hash_2_seen_time[prediction] = ros::Time::now().toSec();
                 std_msgs::String recognized_face;
                 recognized_face.data = "Found " + hash_2_name[prediction];
                 detection_pub.publish(recognized_face);
@@ -89,18 +90,8 @@ void recognizeCallback(const sensor_msgs::ImageConstPtr& image) {
         }
     }
 
-
-
-    // Complain about people leaving you, like your ex-wife.
-    for(std::map<int,double>::iterator itr = hash_2_seen_time.begin(); itr != hash_2_seen_time.end(); ++itr){
-        double time_since_last_seen = ros::Time::now().toSec() - itr->second;
-        hash_2_counter[itr->first] = std::min(hash_2_counter[itr->first] - 1, 0);
-        if(time_since_last_seen > 15 && time_since_last_seen < 15.2) {
-            std_msgs::String gone_message;
-            gone_message.data = hash_2_name[itr->first] + "is no longer detected";
-            detection_pub.publish(gone_message);
-        }
-    }
+    for(std::map<int,int>::iterator itr = hash_2_counter.begin(); itr != hash_2_counter.end(); ++itr)
+        hash_2_counter[itr->first] = std::max(hash_2_counter[itr->first] - 1, 0);
 
     if(visualize) {
         cv::imshow("face_recognizer", gray);
@@ -171,7 +162,18 @@ int main(int argc, char **argv) {
 
         detection_pub = nh.advertise<std_msgs::String>("recognized_faces", 1);
         ros::Subscriber image_sub = nh.subscribe("image_raw", 1, recognizeCallback);
-        ros::spin();
+        while(nh.ok()){
+            // Complain about people leaving you, like your ex-wife.
+            for(std::map<int,double>::iterator itr = hash_2_seen_time.begin(); itr != hash_2_seen_time.end(); ++itr){
+                double time_since_last_seen = ros::Time::now().toSec() - itr->second;
+                if(time_since_last_seen > 15 && time_since_last_seen < 15.02) {
+                    std_msgs::String gone_message;
+                    gone_message.data = hash_2_name[itr->first] + "is no longer detected";
+                    detection_pub.publish(gone_message);
+                }
+            }
+            ros::spinOnce();
+        }
     }
     else if (name.compare("train") == 0 || name.compare("Train") == 0) {
         ROS_INFO("Training");

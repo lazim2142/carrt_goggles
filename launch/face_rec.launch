@@ -6,10 +6,10 @@
 		<remap from="camera" to="left" />
 
 		<param name="device" value="/dev/video1"/>
-		<param name="width" value="640"/>
-		<param name="height" value="480"/>
+		<param name="width" value="1280"/>
+		<param name="height" value="720"/>
 		<param name="fps" value="30"/>
-		<param name="exposure_absolute" value="100" />
+		<param name="exposure_absolute" value="115" />
 	</node>
 
 	<node pkg="uvc_camera" type="uvc_camera_node" name="right">
@@ -17,11 +17,11 @@
 		<remap from="camera_info" to="right/camera_info" />
 		<remap from="camera" to="right" />
 
-		<param name="device" value="/dev/video2"/>
-		<param name="width" value="640"/>
-		<param name="height" value="480"/>
+		<param name="device" value="/dev/video0"/>
+		<param name="width" value="1280"/>
+		<param name="height" value="720"/>
 		<param name="fps" value="30"/>
-		<param name="exposure_absolute" value="100" />
+		<param name="exposure_absolute" value="115" />
 	</node>
 
 	<node pkg="carrt_goggles" type="fisheye_rect" name="fisheye_rect" >
@@ -29,9 +29,10 @@
 		<remap from="/stereo/right/image_raw" to="/right/image_raw" />
 	</node>	
 
+	<arg name="command" />
 	<node pkg="carrt_goggles" type="face_rec" name="face_rec" output="screen">
 		<remap from="face_rec/image_raw" to="left/image_rect" />
-		<param name="cmd" value="recognize"/>
+		<param name="cmd" value="$(arg command)"/>
 		<param name="visualize" value="true"/>
 	</node>
 
